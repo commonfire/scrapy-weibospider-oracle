@@ -19,7 +19,7 @@ runner = CrawlerRunner(settings)
 def crawl():
     #yield runner.crawl('userfollow')
     #yield runner.crawl('userinfo')
-    #yield runner,crawl('weibocontent')
+    #yield runner.crawl('keyweibocontent',keyuid = sys.argv[1])
     yield runner.crawl('keyuser',keyword = sys.argv[1])
     reactor.stop()
 

@@ -35,10 +35,10 @@ class WeibospiderPipeline(object):
         )
         dbpool = adbapi.ConnectionPool('MySQLdb',**dbargs)
         return cls(dbpool)
-    
+   
     def process_item(self,item,spider):
-        if spider.name == 'weibocontent':
-            d = self.dbpool.runInteraction(self._weibocontent_insert,item,spider)  
+        if spider.name == 'keyweibocontent':
+            d = self.dbpool.runInteraction(self._keyweibocontent_insert,item,spider)  
         elif spider.name == 'userfollow':
             d = self.dbpool.runInteraction(self._userfollow_insert,item,spider)  
         elif spider.name == 'userinfo':
@@ -53,16 +53,15 @@ class WeibospiderPipeline(object):
         for i in range(len(item['followuidlist'])):
             conn.execute("insert ignore t_user_follow(userID,followID,infostate,contentstate) values(%s,%s,%s,%s)",(str(WeibospiderPipeline.start_uid),item['followuidlist'][i],0,0))
 
-    def _weibocontent_insert(self,conn,item,spider):
-        #if item.get('content') and item.get('time'):
+    def _keyweibocontent_insert(self,conn,item,spider):
         #插入发表微博内容和时间
         for i in range(len(item['content'])):
             if("'" in item['content'][i]):
                 content_tmp = item['content'][i].replace("'","\'")
-                conn.execute("insert into t_user_weibo(userID,content,time,atuser,repostuser) values(%s,%s,%s,%s,%s)",(str(item['uid']),content_tmp,item['time'][i],item['atuser'][i],item['repostuser'][i]))
+                conn.execute("insert into t_user_weibo_copy(userID,content,time,atuser,repostuser) values(%s,%s,%s,%s,%s)",(str(item['uid']),content_tmp,item['time'][i],item['atuser'][i],item['repostuser'][i]))
             else:
-                conn.execute("insert into t_user_weibo(userID,content,time,atuser,repostuser) values(%s,%s,%s,%s,%s)",(str(item['uid']),item['content'][i],item['time'][i],item['atuser'][i],item['repostuser'][i]))
-        conn.execute("update t_user_follow set contentstate=1 where followID = "+item['uid'])
+                conn.execute("insert into t_user_weibo_copy(userID,content,time,atuser,repostuser) values(%s,%s,%s,%s,%s)",(str(item['uid']),item['content'][i],item['time'][i],item['atuser'][i],item['repostuser'][i]))
+        #conn.execute("update t_user_follow set contentstate=1 where followID = "+item['uid'])
 
     def _userinfo_insert(self,conn,item,spider):
         #将微博用户个人信息插入数据库 

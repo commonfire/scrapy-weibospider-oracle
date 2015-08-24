@@ -40,7 +40,7 @@ class WeiboSpider(CrawlSpider):
         print 'spider closed'
         db = MysqlStore()
         conn = db.get_connection()
-        sql = 'insert into t_spider_state(searchstate) value(1)'
+        sql = 'update t_spider_state set searchstate=1'
         db.insert_operation(conn,sql)
 
     def start_requests(self):
