@@ -14,7 +14,7 @@ import getinfo
 from getpageload import GetWeibopage
 from analyzer import Analyzer
 from settings import USER_NAME
-from datamysql import MysqlStore
+from dataoracle import OracleStore
 
 class WeiboSpider(CrawlSpider):
     name = 'userinfo'
@@ -26,6 +26,17 @@ class WeiboSpider(CrawlSpider):
     start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
+
+
+    def __init__(self,keyword = None):
+        self.keyword = keyword
+
+    def closed(self,reason):
+        db = OracleStore()
+        conn = db.get_connection()
+        sql = 'update t_spider_state set userinfostate = 1'
+        db.insert_operation(conn,sql)
+        print '------userinfo_spider closed------'
 
     def start_requests(self):
         username = WeiboSpider.start_username
@@ -80,25 +91,29 @@ class WeiboSpider(CrawlSpider):
 
 ##########################获取用户基本信息#############################
     def get_userinfo(self,response):
-        db = MysqlStore()
+        db = OracleStore()
         conn = db.get_connection()
-        #sql1 = "select * from t_user_follow where infostate = 0 and contentstate = 0"
-        sql1 = "select * from t_user_info where imagestate = 1 and imageurl = 1"
+        #sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
+        sql1 = '''select * from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
         cursor1 = db.select_operation(conn,sql1)
 
-        sql2 = "select count(*) from t_user_follow where infostate = 0 and contentstate = 0"
+        #sql2 = "select count(*) from t_user_keyword where keyword = '%s'" % str((self.keyword))
+        sql2 = '''select count(*) from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
         cursor2 = db.select_operation(conn,sql2)
         count = cursor2.fetchone()
-
-        for i in range(1):     #count[0]):
-            for result in cursor1.fetchmany(1):
-                if result[0]:
-                    mainpageurl = 'http://weibo.com/u/'+str(result[0])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-                    GetWeibopage.data['uid'] = result[0]   #result[1]
-                    getweibopage = GetWeibopage()
-                    GetWeibopage.data['page'] = 1
-                    firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-                    yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.get_userurl)
+        
+        if count[0]:  #count[0]不为0，即有查询结果
+            for i in range(1):    #(count[0]):
+                for result in cursor1.fetchmany(1):
+                    if result[0]:
+                        mainpageurl = 'http://weibo.com/u/'+str(result[0])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+                        GetWeibopage.data['uid'] = result[0]
+                        getweibopage = GetWeibopage()
+                        GetWeibopage.data['page'] = 1
+                        firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+                        yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.get_userurl)
+        else:
+            yield None
 
     def get_userurl(self,response):
         analyzer = Analyzer()
@@ -109,15 +124,15 @@ class WeiboSpider(CrawlSpider):
     def parse_userinfo(self,response):
         item = WeibospiderItem() 
         analyzer = Analyzer()
-       # try:
-        total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
-        item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+        try:
+            total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
+            item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
 
-            #total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
-            #item['userinfo'] = analyzer.get_userinfo(total_pq2)
-        #except Exception,e:
-            #item['userinfo'] = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'    ),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),' ')   
-            #item['image_urls'] = ' '
+            total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
+            item['userinfo'] = analyzer.get_userinfo(total_pq2)
+        except Exception,e:
+            item['userinfo'] = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'    ),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),' ')   
+            item['image_urls'] = ' '
         item['uid'] = response.meta['uid']
         return item
 ######################################################################

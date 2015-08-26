@@ -13,21 +13,27 @@ BOT_NAME = 'weibospider'
 
 SPIDER_MODULES = ['weibospider.spiders']
 NEWSPIDER_MODULE = 'weibospider.spiders'
-ITEM_PIPELINES={'weibospider.pipelines.WeibospiderPipeline':300}
+ITEM_PIPELINES={#'weibospider.pipelines.WeibospiderPipeline':300}
                 #'weibospider.user_imagepipelines.UserImagesPipeline':1}
                 #'scrapy.piplines.images.ImagesPipline':1}
-
+                'weibospider.oracle_pipelines.WeibospiderPipeline':300
+               }
 #Mysql数据库配置
 MYSQL_HOST = 'localhost'
 MYSQL_DBNAME = 'weiboanalysis'
 MYSQL_USER = 'root'
 MYSQL_PASSWD = 'root'
 
+#Oracle数据库配置
+ORACLE_DSN = '10.108.144.99/orcl'
+ORACLE_USER = 'ZTQ'
+ORACLE_PASSWD = 'fnl12345678'
+
 #微博爬取内容配置
 USER_NAME = '18600299007'
 PASS_WORD = '19911007'
 UID = '3655612552'
-PAGE_NUM = 2   #爬取微博内容页面数
+PAGE_NUM = 1   #爬取微博内容页面数
 
 FOLLOW_PAGE_NUM = 5  #爬取用户关注列表页面数
 

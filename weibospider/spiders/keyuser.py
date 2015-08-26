@@ -37,11 +37,11 @@ class WeiboSpider(CrawlSpider):
         self.keyword = keyword
    
     def closed(self,reason):
-        print 'spider closed'
         db = MysqlStore()
         conn = db.get_connection()
         sql = 'update t_spider_state set searchstate=1'
         db.insert_operation(conn,sql)
+        print '------keyuser_spider closed------'
 
     def start_requests(self):
         username = WeiboSpider.start_username
