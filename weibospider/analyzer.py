@@ -32,25 +32,25 @@ class Analyzer:
             total_pq = pq(unicode(data3))
             return total_pq
         else:
-            print "getmainHtml wrong!"
+            print "get_main_html wrong!"
 
     def get_content(self,total_pq):
         '''获取用户发表微博内容'''
         data = total_pq("div[node-type=feed_list_content]")
         for d in data :
             d = pq(d)
-            if '//' in d.text():   #用户发表微博存在转发情况
-                p1=re.compile('(.*?)\s?//\s?<a',re.S)
+            if '//' in d.text():   #用户发表微博存在"转发"情况
+                p1=re.compile('(.*?)\s?//\s?<a',re.S)  #找出用户自己所发内容，不含//后面的转发内容
                 match = p1.search(d.html())
                 if match:
-                    if(match.group(1).strip() == ''):
+                    if(match.group(1).strip() == ''):  #发表内容为空
                         self.content_list.append('')
                     else:
                         data_pq = pq(match.group(1))
                         content = self.get_content_src(data_pq)
                         self.content_list.append(content)
                 else:
-                    print "getcontent wrong"
+                    print "get_content wrong!"
             else: #用户直接发表微博，没有转发情况
                 content = self.get_content_src(d)                
                 self.content_list.append(content)
@@ -62,10 +62,10 @@ class Analyzer:
         for item in list(data_pq.contents()):
             if 'Element img' not in str(item) and 'Element a' not in str(item) and 'Element span' not in str(item):  #不包含表情标签img和链接标签a
                 content.append(str(item).strip())
-            elif 'img' in str(item):
+            elif 'img' in str(item):  #爬取微博中表情内容
                 parents = pq(item).outerHtml()
                 if pq(parents).attr("title")==None:
-                    print 'image error'    #此时不是新浪系统的img，是用户发的手机内置表情
+                    print 'get_image wrong!'    #此时不是新浪系统的img，是用户发的手机内置表情
                 else:
                     content.append(pq(parents).attr("title"))
         return ''.join(content)    #content列表转换为字符串
@@ -86,27 +86,27 @@ class Analyzer:
         user = total_pq('div[node-type=feed_list_content]')
         for au in user:
             au = pq(au)
-            if '//' in au.text():     #存在转发可能
+            if '//' in au.text():     #存在"转发"可能
                 p1 = re.compile('(<a.*?</a>)\s?//',re.S)
                 match1 = p1.search(au.html())
-                if match1:
-                    atuser_list = pq(match1.group(1))('a').text()
+                if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#";可能会有多个，故返回一个list
+                    atuser_list = pq(match1.group(1))('a').text()   
                     self.atuser_list.append(atuser_list)
                 else:
                     self.atuser_list.append('')
                     
                 p2 = re.compile('.*?//(<a.*?@(.+?)</a>)',re.S)
                 match2 = p2.search(au.html())
-                if match2:
+                if match2:      #记录"转发"用户
                     self.repostuser_list.append(match2.group(2))
                 else:
                     self.repostuser_list.append('')
 
-            else:    #用户没有转发，直接发表微博 
-                atuser_list1 = au.find('a').text()   #记录用户微博中的@用户
+            else:    #用户没有"转发"，直接发表微博
+                atuser_list1 = au.find('a').text()   #记录用户微博中的"@用户"和"微博主题#xxx#"
                 self.atuser_list.append(atuser_list1)
                 
-                repostuser = au.parents('div.WB_detail')  #记录微博用户中的@用户，情况2：直接转发者
+                repostuser = au.parents('div.WB_detail')  #记录微博用户中的@用户，情况2：第一转发者
                 ru = repostuser.find('div[node-type=feed_list_forwardContent]').find('a').eq(0).attr('nick-name') 
                 if ru is not None:
                     self.repostuser_list.append(ru) 
@@ -129,20 +129,23 @@ class Analyzer:
             total_pq = pq(unicode(data3))
             return total_pq
         else:
-            print "getfollowerHtml wrong!"
+            print "get_follower_html wrong!"
 
     def get_follower(self,total_pq):
         '''获取某用户的粉丝uid'''
-        data = total_pq("div.info_name")
-        for dflr in data:
-            dflr = pq(dflr)
-            flr_uid = dflr.find('a').eq(0).attr('usercard')
-            p = re.compile('id=(\d*)')
-            match = p.search(unicode(flr_uid))
-            if match:
-                self.follower_list.append(match.group(1))
-            else:
-                print "getFollower wrong!"
+        try:
+            data = total_pq("div.info_name")
+            for dflr in data:
+                dflr = pq(dflr)
+                flr_uid = dflr.find('a').eq(0).attr('usercard')
+                p = re.compile('id=(\d*)')
+                match = p.search(unicode(flr_uid))
+                if match:
+                    self.follower_list.append(match.group(1))
+                else:
+                    print "get_follower wrong!"
+        except Exception,e:
+            print "!Exception:",e.message
         return self.follower_list
 	    
 
@@ -160,25 +163,28 @@ class Analyzer:
             total_pq = pq(unicode(data3))
             return total_pq
         else:
-            print "getfollowHtml wrong!"
+            print "get_follow_html wrong!"
     
     def get_follow(self,total_pq):
         '''获取某用户的关注uid'''
-        data = total_pq("div.title")
-        for dfl in data:
-            dfl = pq(dfl)
-            fl_uid = dfl.find('a').eq(0).attr('usercard')
-            p = re.compile('id=(\d*)')
-            match = p.search(unicode(fl_uid))
-            if match:
-                self.follow_list.append(match.group(1))
-            else:
-                print "getFollow wrong!"
+        try:
+            data = total_pq("div.title")
+            for dfl in data:
+                dfl = pq(dfl)
+                fl_uid = dfl.find('a').eq(0).attr('usercard')
+                p = re.compile('id=(\d*)')
+                match = p.search(unicode(fl_uid))
+                if match:
+                    self.follow_list.append(match.group(1))
+                else:
+                    print "get_follow wrong!"
+        except Exception,e:
+            print e.message
         return self.follow_list
 
     def get_childfollowhtml(self,total):
         '''获得子用户的关注列表页面html'''
-        total_pq = self.get_followerhtml(total)  #和获取粉丝列表页面的方法相同
+        total_pq = self.get_followerhtml(total)  #和获取粉丝粉丝列表页面的方法相同
         return total_pq
 
     def get_childfollow(self,total_pq):
@@ -202,7 +208,7 @@ class Analyzer:
             total_pq = pq(unicode(data3))
             return total_pq
         else:
-            print "gethtml wrong!"                                            
+            print "get_html wrong!"                                            
    
     
     def get_userinfohref(self,total_pq):

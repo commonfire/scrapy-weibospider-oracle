@@ -16,7 +16,7 @@ from getpageload import GetWeibopage
 from getsearchpage import GetSearchpage
 from analyzer import Analyzer
 from settings import USER_NAME
-from datamysql import MysqlStore
+from dataoracle import OracleStore
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -37,9 +37,9 @@ class WeiboSpider(CrawlSpider):
         self.keyword = keyword
    
     def closed(self,reason):
-        db = MysqlStore()
+        db = OracleStore()
         conn = db.get_connection()
-        sql = 'update t_spider_state set searchstate=1'
+        sql = 'update "t_spider_state" set "searchstate"=1'
         db.insert_operation(conn,sql)
         print '------keyuser_spider closed------'
 

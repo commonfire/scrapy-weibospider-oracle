@@ -34,7 +34,7 @@ class WeiboSpider(CrawlSpider):
     def closed(self,reason):
         db = OracleStore()
         conn = db.get_connection()
-        sql = 'update t_spider_state set userinfostate = 1'
+        sql = 'update "t_spider_state" set "userinfostate" = 1'
         db.insert_operation(conn,sql)
         print '------userinfo_spider closed------'
 
@@ -114,6 +114,7 @@ class WeiboSpider(CrawlSpider):
                         yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.get_userurl)
         else:
             yield None
+        db.close_connection(conn,cursor1,cursor2)
 
     def get_userurl(self,response):
         analyzer = Analyzer()

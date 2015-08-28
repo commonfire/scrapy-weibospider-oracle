@@ -14,7 +14,7 @@ import getinfo
 from getpageload import GetWeibopage
 from analyzer import Analyzer
 from settings import USER_NAME
-from datamysql import MysqlStore
+from dataoracle import OracleStore
 
 class WeiboSpider(CrawlSpider):
     name = 'keyweibocontent'
@@ -29,15 +29,15 @@ class WeiboSpider(CrawlSpider):
 
 
 
-    def __init__(self,keyuid = None):
-        self.keyuid = keyuid
+    def __init__(self,keyword = None):
+        self.keyword = keyword
 
     def closed(self,reason):
-        print 'spider closed'                                                                                                                  
-        db = MysqlStore()
+        db = OracleStore()
         conn = db.get_connection()
-        sql = 'insert into t_spider_state(contentstate) value(1)'
+        sql = '''update "t_spider_state" set "contentstate" = 1'''
         db.insert_operation(conn,sql)
+        print '------keyweibocontent_spider closed------'                                                                                                                  
     
     def start_requests(self):
         username = WeiboSpider.start_username
@@ -46,8 +46,6 @@ class WeiboSpider(CrawlSpider):
 
     def post_requests(self,response):
         serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","exectime":.*}',response.body,re.I)[0]  #获取get请求的数据，用于post请求登录
-        #print '!!!!GET responsebody:',response.body
-        #print '!!!!serverdata',serverdata[0]
         servertime = serverdata[0]
         nonce = serverdata[1]
         pubkey = serverdata[2]
@@ -78,11 +76,9 @@ class WeiboSpider(CrawlSpider):
 
      
     def get_cookie(self, response):
-        #print 'response:~~~~~~~~~~~~~~~',response.body
         p = re.compile('location\.replace\(\'(.*)\'\)')
         try:
             login_url = p.search(response.body).group(1)
-            #print '==============',login_url 
             ret_res = re.search('retcode=0',login_url)
             if ret_res:
                 print 'Login Success!!!!'
@@ -96,20 +92,36 @@ class WeiboSpider(CrawlSpider):
 
 
     def start_getweiboinfo(self,response):
-        mainpageurl = 'http://weibo.com/u/'+str(self.keyuid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-        GetWeibopage.data['uid'] = self.keyuid
-        getweibopage = GetWeibopage()
-        for page in range(WeiboSpider.page_num): 
-            GetWeibopage.data['page'] = page+1
-            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.keyuid},callback=self.parse_firstload)
-
-            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.keyuid},callback=self.parse_secondload)
-           
-            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.keyuid},callback=self.parse_thirdload)
+        db = OracleStore()
+        conn = db.get_connection()
+        sql1 = '''select * from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword)) 
+        cursor1 = db.select_operation(conn,sql1)
         
+        sql2 = '''select count(*) from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword))
+        cursor2 = db.select_operation(conn,sql2)
+        count = cursor2.fetchone()
+        
+        if count[0]:
+            for i in range(1):   #(count[0]):
+                for result in cursor1.fetchmany(1):
+                    if result[0]:
+                        mainpageurl = 'http://weibo.com/u/'+str(result[0])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+                        GetWeibopage.data['uid'] = result[0]
+                        getweibopage = GetWeibopage()
+                        for page in range(WeiboSpider.page_num): 
+                            GetWeibopage.data['page'] = page+1
+                            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+                            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_firstload)
+
+                            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
+                            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_secondload)
+           
+                            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
+                            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_thirdload)
+        else:
+            yield None
+        db.close_connection(conn,cursor1,cursor2)
+
     def parse_firstload(self,response):
         item = WeibospiderItem()
         analyzer = Analyzer()

@@ -25,6 +25,9 @@ class WeiboSpider(CrawlSpider):
     start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
+
+    def __init__(self,uid = None):
+        self.uid = uid
     
     def start_requests(self):
         username = WeiboSpider.start_username
@@ -81,103 +84,47 @@ class WeiboSpider(CrawlSpider):
         request = response.request.replace(url=login_url,meta={'cookiejar':1},method='get',callback=self.get_follow)  #GET请求login_url获取返回的cookie，后续发送Request携带此cookie
         return request
 
-###########################获取用户基本信息#############################
-#    def get_userinfo(self,response):
-#        mainpageurl = 'http://weibo.com/u/'+str(1227086635)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-#        GetWeibopage.data['uid'] = 1227086635
-#        getweibopage = GetWeibopage()
-#        GetWeibopage.data['page'] = 1
-#        #firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-#        thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-#        yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.get_userurl)
-#
-#    def get_userurl(self,response):
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_html(response.body,'script:contains("PCD_person_info")')
-#        userinfo_url = analyzer.get_userinfohref(total_pq)
-#        return  Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'item':response.meta['item'],'uid':response.meta['uid'],'followlist':response.meta['followlist']},callback=self.parse_userinfo)
-#        #yield  Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_userinfo)
-#        
-#    def parse_userinfo(self,response):
-#        item = response.meta['item'] 
-#        #f=open('./text2.html','w')
-#        #f.write(response.body)
-#        analyzer = Analyzer()
-#        total_pq = analyzer.get_html(response.body,'script:contains("PCD_text_b")')
-#        #userinfo_dict = analyzer.get_userinfo(total_pq)
-#        item['userinfo'] = analyzer.get_userinfo(total_pq)
-#        #uid = item['uid']
-#        mainpageurl = 'http://weibo.com/u/'+str(response.meta['uid'])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-#        GetWeibopage.data['uid'] = response.meta['uid']     #uid
-#        getweibopage = GetWeibopage()
-#        GetWeibopage.data['page'] = WeiboSpider.page_num-1
-#        thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-#        yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'item':item,'uid':response.meta['uid'],'followlist':response.meta['followlist']},callback=self.parse_thirdload)
-#######################################################################
-
     def get_follow(self,response):
         getweibopage = GetWeibopage()
         for page in range(WeiboSpider.follow_page_num,0,-1):
             GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
-            follow_url = getinfo.get_url(WeiboSpider.start_uid) + getweibopage.get_followurl()
-            yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_follow)
+            follow_url = getinfo.get_url(self.uid) + getweibopage.get_followurl()
+            yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_follow)
+
+#    def parse_follow_follow(self,response):
+#        '''获取某用户关注用户的关注用户 '''
+#        item = WeibospiderItem()
+#        analyzer = Analyzer()
+#        total_pq = analyzer.get_childfollowhtml(response.body)
+#        item['uid'] = response.meta['uid']
+#        item['followuidlist'] = analyzer.get_childfollow(total_pq)
+#        return item
 
 
     def parse_follow(self,response):
         item = WeibospiderItem()
         analyzer = Analyzer()
-        total_pq = analyzer.get_followhtml(response.body)
-        item['followuidlist'] = analyzer.get_follow(total_pq) 
-        return item
+        getweibopage = GetWeibopage()
+        total_pq = analyzer.get_childfollowhtml(response.body)
+        item['uid'] = response.meta['uid']
+        item['followuidlist'] = analyzer.get_childfollow(total_pq) 
+        yield item
+        if self.uid == response.meta['uid']:
+            for follow_uid in item['followuidlist']:
+#TODO add check 1 or 0
+                for page in range(WeiboSpider.follow_page_num,0,-1):
+                    GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
+                    follow_url = getinfo.get_url(follow_uid) + getweibopage.get_followurl()
+                    yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},callback=self.parse_follow)
 
-#    def start_getweiboinfo(self,response):
-#        mainpageurl = 'http://weibo.com/u/'+str(WeiboSpider.start_uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-#        GetWeibopage.data['uid'] = WeiboSpider.start_uid
-#        getweibopage = GetWeibopage()
-#        for page in range(WeiboSpider.page_num): 
-#            GetWeibopage.data['page'] = page+1
-#            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-#            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_firstload)
-#
-#            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-#            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_secondload)
-#           
-#            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-#            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_thirdload)
-        
-#    def parse_firstload(self,response):
-#        item = response.meta['item']
-#        item['uid'] = response.meta['uid']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-#
-#    def parse_secondload(self,response):
-#        item = response.meta['item']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-#
-#    def parse_thirdload(self,response):        
-#        item = response.meta['item']
-#        #print 'UUUUUUUUUUUUUUUUUUUUUUUUU',response.meta['item'],'OOOOOOOOOOOOOOOOOOO',item['userinfo'],"PPPPPPPPPPPPPPPPPPPPP"
-#        item['uid'] = response.meta['uid']
-#        item['followuidlist'] = response.meta['followlist']
-#        #item['userinfo'] = response.meta['userinfo']
-#        #print '{{{{{{{{{{{{{{{{{{{{{{{',response.meta['userinfo']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-    
+
+
+
+
+
+
+
+
+
+
+
