@@ -29,8 +29,9 @@ class WeiboSpider(CrawlSpider):
 
 
 
-    def __init__(self,keyword = None):
-        self.keyword = keyword
+    def __init__(self,uid = None):
+        #self.keyword = keyword
+        self.uid = uid
 
     def closed(self,reason):
         db = OracleStore()
@@ -92,35 +93,35 @@ class WeiboSpider(CrawlSpider):
 
 
     def start_getweiboinfo(self,response):
-        db = OracleStore()
-        conn = db.get_connection()
-        sql1 = '''select * from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword)) 
-        cursor1 = db.select_operation(conn,sql1)
-        
-        sql2 = '''select count(*) from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword))
-        cursor2 = db.select_operation(conn,sql2)
-        count = cursor2.fetchone()
-        
-        if count[0]:
-            for i in range(1):   #(count[0]):
-                for result in cursor1.fetchmany(1):
-                    if result[0]:
-                        mainpageurl = 'http://weibo.com/u/'+str(result[0])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-                        GetWeibopage.data['uid'] = result[0]
-                        getweibopage = GetWeibopage()
-                        for page in range(WeiboSpider.page_num): 
-                            GetWeibopage.data['page'] = page+1
-                            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-                            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_firstload)
+#        db = OracleStore()
+#        conn = db.get_connection()
+#        sql1 = '''select * from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword)) 
+#        cursor1 = db.select_operation(conn,sql1)
+#        
+#        sql2 = '''select count(*) from "t_user_keyword" where "keyword" = '%s' ''' % str((self.keyword))
+#        cursor2 = db.select_operation(conn,sql2)
+#        count = cursor2.fetchone()
+#        
+#        if count[0]:
+#            for i in range(1):   #(count[0]):
+#                for result in cursor1.fetchmany(1):
+#                    if result[0]:
+        mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+        GetWeibopage.data['uid'] = self.uid    #result[0]
+        getweibopage = GetWeibopage()
+        for page in range(WeiboSpider.page_num): 
+            GetWeibopage.data['page'] = page+1
+            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_firstload)
 
-                            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-                            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_secondload)
+            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
+            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_secondload)
            
-                            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-                            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.parse_thirdload)
-        else:
-            yield None
-        db.close_connection(conn,cursor1,cursor2)
+            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
+            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_thirdload)
+#        else:
+#            yield None
+#        db.close_connection(conn,cursor1,cursor2)
 
     def parse_firstload(self,response):
         item = WeibospiderItem()

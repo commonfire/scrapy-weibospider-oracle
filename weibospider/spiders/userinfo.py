@@ -28,8 +28,8 @@ class WeiboSpider(CrawlSpider):
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
 
-    def __init__(self,keyword = None):
-        self.keyword = keyword
+    def __init__(self,uid = None):
+        self.uid = uid
 
     def closed(self,reason):
         db = OracleStore()
@@ -93,28 +93,28 @@ class WeiboSpider(CrawlSpider):
     def get_userinfo(self,response):
         db = OracleStore()
         conn = db.get_connection()
-        #sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
-        sql1 = '''select * from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
-        cursor1 = db.select_operation(conn,sql1)
+        ##sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
+        #sql1 = '''select * from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
+        #cursor1 = db.select_operation(conn,sql1)
 
-        #sql2 = "select count(*) from t_user_keyword where keyword = '%s'" % str((self.keyword))
-        sql2 = '''select count(*) from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
-        cursor2 = db.select_operation(conn,sql2)
-        count = cursor2.fetchone()
+        ##sql2 = "select count(*) from t_user_keyword where keyword = '%s'" % str((self.keyword))
+        #sql2 = '''select count(*) from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
+        #cursor2 = db.select_operation(conn,sql2)
+        #count = cursor2.fetchone()
         
-        if count[0]:  #count[0]不为0，即有查询结果
-            for i in range(1):    #(count[0]):
-                for result in cursor1.fetchmany(1):
-                    if result[0]:
-                        mainpageurl = 'http://weibo.com/u/'+str(result[0])+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-                        GetWeibopage.data['uid'] = result[0]
-                        getweibopage = GetWeibopage()
-                        GetWeibopage.data['page'] = 1
-                        firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-                        yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':result[0]},callback=self.get_userurl)
-        else:
-            yield None
-        db.close_connection(conn,cursor1,cursor2)
+        #if count[0]:  #count[0]不为0，即有查询结果
+        #    for i in range(1):    #(count[0]):
+        #        for result in cursor1.fetchmany(1):
+        #            if result[0]:
+        mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+        GetWeibopage.data['uid'] = self.uid     #result[0]
+        getweibopage = GetWeibopage()
+        GetWeibopage.data['page'] = 1
+        firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+        yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.get_userurl)
+        #else:
+        #    yield None
+        #db.close_connection(conn,cursor1,cursor2)
 
     def get_userurl(self,response):
         analyzer = Analyzer()

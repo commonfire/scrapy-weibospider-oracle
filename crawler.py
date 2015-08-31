@@ -16,11 +16,12 @@ runner = CrawlerRunner(settings)
 @defer.inlineCallbacks
 
 def crawl():
-    #yield runner.crawl('userfollow')
-    #yield runner.crawl('userinfo')
-    yield runner.crawl('keyuser',keyword = sys.argv[1])
-    yield runner.crawl('keyweibocontent',keyword = sys.argv[1])
-    yield runner.crawl('userinfo',keyword = sys.argv[1]) 
+    if sys.argv[2] == 'keyuser':
+        yield runner.crawl('keyuser',keyword = sys.argv[1])
+    elif sys.argv[2] == 'keyweibocontent':
+        yield runner.crawl('keyweibocontent',uid = sys.argv[1])
+    else:
+        yield runner.crawl('userinfo',uid = sys.argv[1]) 
     reactor.stop()
 
 crawl()

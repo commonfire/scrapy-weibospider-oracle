@@ -16,29 +16,28 @@ class OracleStore:
         except cx_Oracle.Error,e:
             print "Oracle Error %d: %s" % (e.args[0],e.args[1])  
 
-    def close_connection(self,cursor,conn):
+    def close_connection(self,conn,*cursor):
         '''关闭数据库连接'''
-        cursor.close()
+        for cur in cursor:
+            cur.close()
         conn.close()
         print "oracle_connection close!!"
 
     def insert_operation(self,conn,sql):
         '''插入数据操作'''
-        cur = conn.cursor()
-        cur.execute(sql)
-        print 'insertion success!!'
+        try:
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()  #!!注意必须有此处的事务提交，否则插入操作不生效
+            print 'insertion success!!'
+            self.close_connection(conn,cur)
+        except cx_Oracle.Error,e:
+            print e.message  #raise e
+        
 
     def select_operation(self,conn,sql):
         '''从数据库中选择出数据'''
         cur = conn.cursor()
         cur.execute(sql)
         return cur
-
-
-#db=OracleStore()
-#conn = db.get_connection()
-#sql = '''insert into "t_user_keyword"("userID","keyword") values(1111,'hahh')'''
-#sql = '''update "t_spider_state" set "searchstate"=1'''
-#db.insert_operation(conn,sql)
-
 

@@ -13,14 +13,13 @@ import time
 import getinfo
 from getpageload import GetWeibopage
 from analyzer import Analyzer
-from settings import USER_NAME
+from dataoracle import OracleStore
 
 class WeiboSpider(CrawlSpider):
     name = 'userfollow'
     allowed_domains = ['weibo.com','sina.com.cn']
     settings = get_project_settings()
-    #start_username = settings['USER_NAME']
-    start_username = USER_NAME
+    start_username = settings['USER_NAME']
     start_password = settings['PASS_WORD']
     start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
@@ -87,7 +86,8 @@ class WeiboSpider(CrawlSpider):
     def get_follow(self,response):
         getweibopage = GetWeibopage()
         for page in range(WeiboSpider.follow_page_num,0,-1):
-            GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
+            #GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
+            GetWeibopage.followdata['page'] = page
             follow_url = getinfo.get_url(self.uid) + getweibopage.get_followurl()
             yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_follow)
 
@@ -110,12 +110,21 @@ class WeiboSpider(CrawlSpider):
         item['followuidlist'] = analyzer.get_childfollow(total_pq) 
         yield item
         if self.uid == response.meta['uid']:
+            db = OracleStore()
+            conn = db.get_connection()
             for follow_uid in item['followuidlist']:
-#TODO add check 1 or 0
-                for page in range(WeiboSpider.follow_page_num,0,-1):
-                    GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
-                    follow_url = getinfo.get_url(follow_uid) + getweibopage.get_followurl()
-                    yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},callback=self.parse_follow)
+                sql = """select count(*) from "t_user_follow" where "userID"='%s'""" % str(follow_uid)
+                cursor = db.select_operation(conn,sql)
+                count = cursor.fetchone()
+                if not count[0]:  #count[0]为0，即该账户没有获取过
+                    for page in range(WeiboSpider.follow_page_num,0,-1):
+                        GetWeibopage.followdata['page'] = page
+                        follow_url = getinfo.get_url(follow_uid) + getweibopage.get_followurl()
+                        yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},callback=self.parse_follow)
+                else:
+                    print 'uid existed!',follow_uid
+                    yield None
+            db.close_connection(conn,cursor)
 
 
 

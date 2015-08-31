@@ -14,7 +14,9 @@ class Analyzer:
         self.follow_list = []       #某用户关注列表
         self.childfollow_list = []  #某子用户关注列表
         self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),' ')
-        self.keyuserid = []         #与某关键词相关的用户uid
+        self.keyuser_id = []         #与某关键词相关的用户uid
+        self.keyuser_alias = []      #与某关键词相关的用户昵称
+        self.keyuser_time = []       #与某关键词相关用户uid发表内容的时间
 
 #########################################获取个人主页内容#################################
     def get_mainhtml(self,total): 
@@ -145,7 +147,7 @@ class Analyzer:
                 else:
                     print "get_follower wrong!"
         except Exception,e:
-            print "!Exception:",e.message
+            print "Exception!:",e.message
         return self.follower_list
 	    
 
@@ -225,7 +227,7 @@ class Analyzer:
                 li = pq(li)
                 self.userinfo_dict[li.find('span').eq(0).text()] = li.find('span').eq(1).text()
         except Exception,e:
-           raise Exception 
+           raise e 
             
         return self.userinfo_dict
 
@@ -235,18 +237,27 @@ class Analyzer:
         return url
 
     def get_keyuser(self,total_pq):
-        '''获取关键词相关用户uid'''
-        data = total_pq("div.feed_content")
-        for dku in data:
+        '''获取关键词相关用户uid及昵称'''
+        data1 = total_pq("div.feed_content")
+        data2 = total_pq("div.content").children("div.feed_from")
+        for dku in data1:
             dku = pq(dku)
-            href = dku.find('a').eq(0).attr('usercard')
+            alias = dku.find('a').eq(0).attr('nick-name')   #获取用户昵称
+            self.keyuser_alias.append(alias)
+
+            href = dku.find('a').eq(0).attr('usercard')     #获取用户uid
             p = re.compile("id=(\d*)&",re.S)
             match = p.search(unicode(href))
             if match:
-                  self.keyuserid.append(match.group(1))
+                  self.keyuser_id.append(match.group(1))
             else:
                 print "get_keyuser wrong!!"
-        return self.keyuserid
+
+        for dku in data2:
+            dku = pq(dku)
+            time = dku.find('a').eq(0).attr("title")
+            self.keyuser_time.append(time)
+        return self.keyuser_id,self.keyuser_alias,self.keyuser_time
 
 
 
