@@ -14,6 +14,7 @@ import getinfo
 from getpageload import GetWeibopage
 from analyzer import Analyzer
 from settings import USER_NAME
+from friendcircle import FriendCircle
 from dataoracle import OracleStore
 
 class WeiboSpider(CrawlSpider):
@@ -112,47 +113,30 @@ class WeiboSpider(CrawlSpider):
         for page in range(WeiboSpider.page_num): 
             GetWeibopage.data['page'] = page+1
             firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_firstload)
+            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
 
             secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_secondload)
+            #yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
            
             thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_thirdload)
+            #yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
+
 #        else:
 #            yield None
 #        db.close_connection(conn,cursor1,cursor2)
 
-    def parse_firstload(self,response):
+    def parse_load(self,response):
         item = WeibospiderItem()
         analyzer = Analyzer()
+        friendcircle = FriendCircle()
         total_pq =  analyzer.get_mainhtml(response.body)
         item['uid'] = response.meta['uid']
         item['content'] = analyzer.get_content(total_pq)
         item['time'] = analyzer.get_time(total_pq)
-        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
+        atuser_info,item['repost_user'] = analyzer.get_atuser_repostuser(total_pq)
+        atuser_list = friendcircle.atuser_parser(atuser_info)
+        item['atuser_nickname_uid'] = friendcircle.atuser_uid_parser(atuser_list)
+        item['repostuser_uid'] = friendcircle.repostuser_uid_parser(item['repost_user'])
         return item
 
 
-    def parse_secondload(self,response):
-        item = WeibospiderItem()
-        analyzer = Analyzer()
-        total_pq =  analyzer.get_mainhtml(response.body)
-        item['uid'] = response.meta['uid']
-        item['content'] = analyzer.get_content(total_pq)
-        item['time'] = analyzer.get_time(total_pq)
-        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-        return item
-
-
-    def parse_thirdload(self,response):        
-        item = WeibospiderItem()
-        analyzer = Analyzer()
-        total_pq =  analyzer.get_mainhtml(response.body)
-        item['uid'] = response.meta['uid']
-        item['content'] = analyzer.get_content(total_pq)
-        item['time'] = analyzer.get_time(total_pq)
-        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-        return item
-
-    

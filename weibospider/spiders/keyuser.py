@@ -111,3 +111,5 @@ class WeiboSpider(CrawlSpider):
         item['keyword_uid'],item['keyword_alias'],item['keyword_time'] =analyzer.get_keyuser(total_pq)
         item['keyword'] = response.meta['keyword']
         return item
+
+

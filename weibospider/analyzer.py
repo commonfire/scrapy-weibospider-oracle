@@ -194,9 +194,15 @@ class Analyzer:
         self.childfollow_list = self.get_follower(total_pq)
         return self.childfollow_list
 
+    def get_relation_pagenum(self,total_pq):
+        '''获取关注/粉丝列表页面总数 '''
+        data = total_pq('div.W_pages')
+        follow_pagenum = data.find('a').eq(-2).text()
+        return follow_pagenum
+
 #########################################解析微博用户的个人信息##########################################
     def get_html(self,total,condition):
-        '''获取个人主页中html内容'''
+        '''获得爬取网页中html内容'''
         total_pq = pq(unicode(total))
         #获取指定<script>
         total1 = total_pq(condition).html()
@@ -261,4 +267,5 @@ class Analyzer:
 
 
 
+    
 

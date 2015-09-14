@@ -48,17 +48,30 @@ class WeibospiderPipeline(object):
         return d
 
     def _userfollow_insert(self,conn,item,spider): 
-        for i in range(len(item['followuidlist'])):
-            conn.execute('''insert into "t_user_follow"("userID","followID") values(:1,:2)''',(str(item['uid']),item['followuidlist'][i]))
+        if len(item['follow_uid_list']) and not len(item['follower_uid_list']):
+            for i in range(len(item['follow_uid_list'])):
+                conn.execute('''insert into "t_user_follow"("userID","followID") values(:1,:2)''',(str(item['uid']),item['follow_uid_list'][i]))
+        
+        if len(item['follower_uid_list']) and not len(item['follow_uid_list']):
+            for i in range(len(item['follower_uid_list'])):
+                conn.execute('''insert into "t_user_follower"("userID","followerID") values(:1,:2)''',(str(item['uid']),item['follower_uid_list'][i]))
+
 
     def _keyweibocontent_insert(self,conn,item,spider):
         #插入发表微博内容和时间
         for i in range(len(item['content'])):
-            if("'" in item['content'][i]):
+            if "'" in item['content'][i]:
                 content_tmp = item['content'][i].replace("'","\'")
-                conn.execute('''insert into "t_user_weibocontent"("userID","content","time","atuser","repostuser","id") values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,:5,auto_id.nextval)''',[str(item['uid']),item['content'][i],item['time'][i],item['atuser'][i],item['repostuser'][i]])
+                conn.execute('''insert into "t_user_weibocontent"("userID","content","publishTime","repostuser","repostuserID","id") values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,:5,(select nvl("MAX"("id"),0)+1 as "id" from "t_user_weibocontent"))''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['repostuser_uid'][i]])
             else:
-                conn.execute('''insert into "t_user_weibocontent"("userID","content","time","atuser","repostuser","id") values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,:5,auto_id.nextval)''',[str(item['uid']),item['content'][i],item['time'][i],item['atuser'][i],item['repostuser'][i]])
+                conn.execute('''insert into "t_user_weibocontent"("userID","content","publishTime","repostuser","repostuserID","id") values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,:5,(select nvl("MAX"("id"),0)+1 as "id" from "t_user_weibocontent"))''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['repostuser_uid'][i]])
+
+            if item['atuser_nickname_uid'][i] != {}:
+                for key in item['atuser_nickname_uid'][i].keys():
+                    conn.execute('''insert into "t_user_weibocontent_atuser"("userID","publishTime","atuser","atuserID") values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3,:4)''',[str(item['uid']),item['time'][i],key,item['atuser_nickname_uid'][i][key]])
+
+        
+
 
     def _userinfo_insert(self,conn,item,spider):
         #将微博用户个人信息插入数据库 
@@ -81,7 +94,8 @@ class WeibospiderPipeline(object):
         #将关键词相关用户uid插入数据库
         for i in range(len(item['keyword_uid'])):
             conn.execute('''insert into "t_user_keyword"("userID","keyword","userAlias","time") values(:1,:2,:3,to_date(:4,'YYYY-MM-DD HH24:MI'))''',[item['keyword_uid'][i],str(item['keyword']),item['keyword_alias'][i],item['keyword_time'][i]])
+
     def _handle_error(self,failure,item,spider):
         logging.error(failure)
 
-
+         

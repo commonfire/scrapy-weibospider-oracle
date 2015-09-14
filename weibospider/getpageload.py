@@ -20,10 +20,14 @@ class GetWeibopage:
         'uid':'',
     }
 
-    followdata = {
+    relation_data = {  #获取子用户粉丝和关注时的url参数,不用同下（主用户获取方式）因为V字认证用户用下方法无法获取
+        'page':''
+    }
+   
+    follow_data = {    #获取主用户粉丝和关注时的url参数
         'cfs':'',
         't':'1',
-        'Pl_Official_RelationMyfollow__104_page':''       
+        'Pl_Official_RelationMyfollow__104_page':''      
     }
     
     def get_firstloadurl(self):
@@ -42,8 +46,8 @@ class GetWeibopage:
         GetWeibopage.data['pre_page'] = GetWeibopage.data['page']
         return urllib.urlencode(GetWeibopage.data)
 
-    def get_followurl(self):
-        return urllib.urlencode(GetWeibopage.followdata)
+    def get_relation_paramurl(self):
+        return urllib.urlencode(GetWeibopage.relation_data)
 
-
-
+    def get_follow_paramurl(self):
+        return urllib.urlencode(GetWeibopage.follow_data)

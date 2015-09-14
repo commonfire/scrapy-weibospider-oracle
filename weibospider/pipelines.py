@@ -43,7 +43,7 @@ class WeibospiderPipeline(object):
             d = self.dbpool.runInteraction(self._userfollow_insert,item,spider)  
         elif spider.name == 'userinfo':
             d = self.dbpool.runInteraction(self._userinfo_insert,item,spider)  
-        else:
+        else: 
             d = self.dbpool.runInteraction(self._keyuser_insert,item,spider)
         d.addErrback(self._handle_error,item,spider) 
         d.addBoth(lambda _:item)

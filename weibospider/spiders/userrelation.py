@@ -16,7 +16,7 @@ from analyzer import Analyzer
 from dataoracle import OracleStore
 
 class WeiboSpider(CrawlSpider):
-    name = 'userfollow!!!'
+    name = 'userfollow'
     allowed_domains = ['weibo.com','sina.com.cn']
     settings = get_project_settings()
     start_username = settings['USER_NAME']
@@ -25,6 +25,7 @@ class WeiboSpider(CrawlSpider):
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
     follower_page_num = settings['FOLLOWER_PAGE_NUM']
+    getweibopage = GetWeibopage()
 
     def __init__(self,uid = None):
         self.uid = uid
@@ -81,36 +82,68 @@ class WeiboSpider(CrawlSpider):
         except:
             print 'Login Error!!!!'
 
-        request = response.request.replace(url=login_url,meta={'cookiejar':1},method='get',callback=self.get_relation)  #GET请求login_url获取返回的cookie，后续发送Request携带此cookie
+        request = response.request.replace(url=login_url,meta={'cookiejar':1},method='get',callback=self.get_relation_pagenum)  #GET请求login_url获取返回的cookie，后续发送Request携带此cookie
         return request
 
-#    def get_relation_pagenum(self,response):
-        
+    def get_relation_pagenum(self,response):
+        follow_url = 'http://weibo.com/%s/follow?page=1' % str(self.uid)
+        follower_url = 'http://weibo.com/%s/fans?page=1' % str(self.uid)
+        yield Request(url=follow_url,meta={'cookiejar':1,'uid':self.uid},dont_filter=True,callback=self.parse_based_follownum)
+        yield Request(url=follower_url,meta={'cookiejar':1,'uid':self.uid},dont_filter=True,callback=self.parse_based_followernum)
 
-    def get_relation(self,response):
-        '''获取用户粉丝或关注请求'''
-        getweibopage = GetWeibopage()
-        for page in range(WeiboSpider.follow_page_num,0,-1):
-            GetWeibopage.relation_data['page'] = page
-            follow_url = getinfo.get_follow_mainurl(self.uid) + getweibopage.get_relation_paramurl()
-            yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_follow)
+    def parse_based_follownum(self,response):
+        item = WeibospiderItem()
+        analyzer = Analyzer()
+        total_follow_pq = analyzer.get_childfollowhtml(response.body)
+        follow_page_num = analyzer.get_relation_pagenum(total_follow_pq) 
 
-        for page in range(WeiboSpider.follower_page_num,0,-1):
-            GetWeibopage.relation_data['page'] = page
-            follower_url = getinfo.get_follower_mainurl(self.uid) + getweibopage.get_relation_paramurl()
-            yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_follower)
+        if follow_page_num != "" and int(follow_page_num) >= 5:
+            for page in range(5,0,-1):
+                GetWeibopage.relation_data['page'] = page
+                follow_url = getinfo.get_follow_mainurl(response.meta['uid']) + WeiboSpider.getweibopage.get_relation_paramurl()
+                yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_follow)
 
+        elif follow_page_num == "":
+            follow_url = 'http://weibo.com/%s/follow?page=1' % response.meta['uid']
+            yield Request(url=follow_url,meta={'cookiejar':1,'uid':response.meta['uid']},callback=self.parse_follow)
+        else:
+            for page in range(int(follow_page_num),0,-1):
+                GetWeibopage.relation_data['page'] = page
+                follow_url = getinfo.get_follow_mainurl(response.meta['uid']) + WeiboSpider.getweibopage.get_relation_paramurl()
+                yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_follow)
+
+    def parse_based_followernum(self,response):
+        item = WeibospiderItem()
+        analyzer = Analyzer()
+        total_follower_pq = analyzer.get_followerhtml(response.body)
+        follower_page_num = analyzer.get_relation_pagenum(total_follower_pq) 
+
+        if follower_page_num != "" and int(follower_page_num) >= 5:
+            for page in range(5,0,-1):
+                GetWeibopage.relation_data['page'] = page
+                follower_url = getinfo.get_follower_mainurl(response.meta['uid']) + WeiboSpider.getweibopage.get_relation_paramurl()
+                yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_follower)
+
+        elif follower_page_num == "":
+            follower_url = 'http://weibo.com/%s/fans?page=1' % response.meta['uid']
+            yield Request(url=follower_url,meta={'cookiejar':1,'uid':response.meta['uid']},callback=self.parse_follower)
+            #yield None
+        else:
+            for page in range(int(follower_page_num),0,-1):
+                GetWeibopage.relation_data['page'] = page
+                follower_url = getinfo.get_follower_mainurl(response.meta['uid']) + WeiboSpider.getweibopage.get_relation_paramurl()
+                yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_follower)
 
     def parse_follow(self,response):
         item = WeibospiderItem()
         analyzer = Analyzer()
-        getweibopage = GetWeibopage()
         total_follow_pq = analyzer.get_childfollowhtml(response.body)
         item['uid'] = response.meta['uid']
         item['follow_uid_list'] = analyzer.get_childfollow(total_follow_pq) 
         item['follower_uid_list'] = []
         yield item
 
+        #获取二级(关注)用户的关注和粉丝
         if self.uid == response.meta['uid'] and len(item['follow_uid_list']):
             db = OracleStore()
             conn = db.get_connection()
@@ -123,10 +156,8 @@ class WeiboSpider(CrawlSpider):
                 follow_scraped = count1[0]
                 cursor1.close()
                 if not follow_scraped:  #scraped为0，即该账户没有获取过
-                    for page in range(WeiboSpider.follow_page_num,0,-1):
-                        GetWeibopage.relation_data['page'] = page
-                        follow_url = getinfo.get_follow_mainurl(follow_uid) + getweibopage.get_relation_paramurl()
-                        yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},callback=self.parse_follow)
+                    follow_url = 'http://weibo.com/%s/follow?page=1' % str(follow_uid) 
+                    yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},dont_filter=True,callback=self.parse_based_follownum) 
                 else:
                     print 'follow_uid existed!',follow_uid
                     yield None
@@ -138,10 +169,8 @@ class WeiboSpider(CrawlSpider):
                 follower_scraped = count2[0]
                 cursor2.close()
                 if not follower_scraped:  #scraped为0，即该账户没有获取过
-                    for page in range(WeiboSpider.follower_page_num,0,-1):
-                        GetWeibopage.relation_data['page'] = page
-                        follower_url = getinfo.get_follower_mainurl(follow_uid) + getweibopage.get_relation_paramurl()
-                        yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},callback=self.parse_follower)
+                    follower_url = 'http://weibo.com/%s/fans?page=1' % str(follow_uid) 
+                    yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follow_uid},dont_filter=True,callback=self.parse_based_followernum)
                 else:
                     print 'follower_uid existed!',follow_uid
                     yield None
@@ -160,6 +189,7 @@ class WeiboSpider(CrawlSpider):
         item['follow_uid_list'] = []    
         yield item
 
+       #获取二级(粉丝)用户的关注和粉丝
         if self.uid == response.meta['uid'] and len(item['follower_uid_list']):
             db = OracleStore()
             conn = db.get_connection()
@@ -172,10 +202,8 @@ class WeiboSpider(CrawlSpider):
                 follower_scraped = count1[0]
                 cursor1.close()
                 if not follower_scraped:  #scraped为0，即该账户没有获取过
-                    for page in range(WeiboSpider.follow_page_num,0,-1):
-                        GetWeibopage.relation_data['page'] = page
-                        follow_url = getinfo.get_follow_mainurl(follower_uid) + getweibopage.get_relation_paramurl()
-                        yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follower_uid},callback=self.parse_follow)
+                    follow_url = 'http://weibo.com/%s/follow?page=1' % str(follower_uid) 
+                    yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follower_uid},dont_filter=True,callback=self.parse_based_follownum) 
                 else:
                     print 'follow_uid existed!',follower_uid
                     yield None
@@ -187,10 +215,8 @@ class WeiboSpider(CrawlSpider):
                 follower_scraped = count2[0]
                 cursor2.close()
                 if not follower_scraped:  #scraped为0，即该账户没有获取过
-                    for page in range(WeiboSpider.follower_page_num,0,-1):
-                        GetWeibopage.relation_data['page'] = page
-                        follower_url = getinfo.get_follower_mainurl(follower_uid) + getweibopage.get_relation_paramurl()
-                        yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follower_uid},callback=self.parse_follower)
+                    follower_url = 'http://weibo.com/%s/fans?page=1' % str(follower_uid) 
+                    yield Request(url=follower_url,meta={'cookiejar':response.meta['cookiejar'],'uid':follower_uid},dont_filter=True,callback=self.parse_based_followernum)
                 else:
                     print 'follower_uid existed!',follower_uid
                     yield None

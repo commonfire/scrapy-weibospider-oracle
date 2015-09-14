@@ -32,10 +32,11 @@ ORACLE_PASSWD = 'fnl12345678'
 #微博爬取内容配置
 USER_NAME = '18611240462'
 PASS_WORD = '19911007'
-UID = '3655612552'
+UID = '2728266823'   #'3655612552'  #'2728266823'
 PAGE_NUM = 1   #爬取微博内容页面数
 
 FOLLOW_PAGE_NUM = 1  #爬取用户关注列表页面数
+FOLLOWER_PAGE_NUM = 1  #爬取用户粉丝列表页面数
 
 SEARCH_PAGE_NUM = 1  #爬取基于关键词搜索的页面数
 
@@ -81,7 +82,7 @@ PROXIES = [
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 5
+DOWNLOAD_DELAY = 5 
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN=16
 #CONCURRENT_REQUESTS_PER_IP=16

@@ -14,13 +14,23 @@ def get_pwd(password,servertime,nonce,pubkey):
 
 
 def get_user(username):
-    username_ = urllib.quote(username)
-    username = base64.encodestring(username_)[:-1]
+    username_coded = urllib.quote(username)
+    username = base64.encodestring(username_coded)[:-1]
     return username 
 
 
-def get_url(uid):
+def get_follow_mainurl(uid):
     '''获取入口uid的关注列表页面'''
     url = 'http://weibo.com/%s/follow?' % str(uid)
     return url
- 
+
+def get_follower_mainurl(uid):
+    '''获取入口uid的粉丝列表页面'''
+    url = 'http://weibo.com/%s/fans?' % str(uid)
+    return url
+
+def get_mainurl(uid):
+    '''获取入口uid的关注列表页面'''
+    url = 'http://weibo.com/p/100505' + str(uid) + '/myfollow?' 
+    return url
+
