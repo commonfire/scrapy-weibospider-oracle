@@ -25,9 +25,9 @@ MYSQL_USER = 'root'
 MYSQL_PASSWD = 'root'
 
 #Oracle数据库配置
-ORACLE_DSN = '10.108.144.99/orcl'
-ORACLE_USER = 'ZTQ'
-ORACLE_PASSWD = 'fnl12345678'
+ORACLE_DSN = '10.108.147.143/orcl'
+ORACLE_USER = 'bupt'       #'ZTQ'
+ORACLE_PASSWD = 'bupt'     #'fnl12345678'
 
 #微博爬取内容配置
 USER_NAME = '18611240462'

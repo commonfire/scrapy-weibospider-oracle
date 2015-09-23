@@ -37,16 +37,15 @@ class WeiboSpider(CrawlSpider):
         self.keyword = keyword
    
     def closed(self,reason):
-        db = OracleStore()
-        conn = db.get_connection()
-        sql = 'update "t_spider_state" set "searchstate"=1'
+        db = OracleStore();conn = db.get_connection()
+        sql = 'update t_spider_state set searchstate=1'
         db.insert_operation(conn,sql)
         print '------keyuser_spider closed------'
 
     def start_requests(self):
         username = WeiboSpider.start_username
         url = 'http://login.sina.com.cn/sso/prelogin.php?entry=sso&callback=sinaSSOController.preloginCallBack&su=%s&rsakt=mod&client=ssologin.js(v1.4.4)' % username
-        return [Request(url=url,method='get',callback=self.post_requests)]
+        yield Request(url=url,method='get',callback=self.post_requests)
 
     def post_requests(self,response):
         serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","exectime":.*}',response.body,re.I)[0]  #获取get请求的数据，用于post请求登录
@@ -108,7 +107,7 @@ class WeiboSpider(CrawlSpider):
         item = WeibospiderItem() 
         analyzer = Analyzer()
         total_pq = analyzer.get_html(response.body,'script:contains("feed_content wbcon")')
-        item['keyword_uid'],item['keyword_alias'],item['keyword_time'] =analyzer.get_keyuser(total_pq)
+        item['keyword_uid'],item['keyword_alias'],item['keyword_time'],item['keyword_timestamp'] =analyzer.get_keyuser(total_pq)
         item['keyword'] = response.meta['keyword']
         return item
 

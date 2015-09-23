@@ -8,6 +8,7 @@ class Analyzer:
     def __init__(self):
         self.content_list = []      #微博内容列表
         self.time_list = []         #微博发表时间列表
+        self.timestamp_list = []    #微博发表时间戳列表
         self.atuser_list = []       #记录用户微博@用户
         self.repostuser_list = []   #记录微博转发用户
         self.follower_list = []     #某用户粉丝列表
@@ -17,6 +18,7 @@ class Analyzer:
         self.keyuser_id = []         #与某关键词相关的用户uid
         self.keyuser_alias = []      #与某关键词相关的用户昵称
         self.keyuser_time = []       #与某关键词相关用户uid发表内容的时间
+        self.keyuser_timestamp = []  #与某关键词相关用户uid发表内容的时间戳
 
 #########################################获取个人主页内容#################################
     def get_mainhtml(self,total): 
@@ -80,8 +82,10 @@ class Analyzer:
             dt = pq(dt)
             if(dt.find('a').eq(0).attr('name')):  #注意不记录转发微博原文的发表时间
                 time = dt.find('a').eq(0).attr('title')
+                timestamp = dt.find('a').eq(0).attr('date') 
                 self.time_list.append(time)
-        return self.time_list
+                self.timestamp_list.append(timestamp)
+        return self.time_list,self.timestamp_list
 
     def get_atuser_repostuser(self,total_pq):
         '''获取用户微博中@的用户以及获取转发微博的一级源用户'''
@@ -262,8 +266,10 @@ class Analyzer:
         for dku in data2:
             dku = pq(dku)
             time = dku.find('a').eq(0).attr("title")
+            timestamp = dku.find('a').eq(0).attr("date")
             self.keyuser_time.append(time)
-        return self.keyuser_id,self.keyuser_alias,self.keyuser_time
+            self.keyuser_timestamp.append(timestamp)
+        return self.keyuser_id,self.keyuser_alias,self.keyuser_time,self.keyuser_timestamp
 
 
 

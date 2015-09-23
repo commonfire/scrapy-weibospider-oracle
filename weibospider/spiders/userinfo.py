@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
+#python标准模块
+import re
+import base64
+import binascii
+import logging
+#python第三方模块
+import rsa
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.http import Request,FormRequest
 from scrapy.utils.project import get_project_settings
 from weibospider.items import WeibospiderItem
-import re
-import base64
-import rsa
-import binascii
-import time
-import getinfo
-from getpageload import GetWeibopage
-from analyzer import Analyzer
 from settings import USER_NAME
+#应用程序自定义模块
+import getinfo
+from analyzer import Analyzer
 from dataoracle import OracleStore
+from getpageload import GetWeibopage
+
+logger = logging.getLogger(__name__)
 
 class WeiboSpider(CrawlSpider):
     name = 'userinfo'
@@ -34,7 +39,7 @@ class WeiboSpider(CrawlSpider):
     def closed(self,reason):
         db = OracleStore()
         conn = db.get_connection()
-        sql = 'update "t_spider_state" set "userinfostate" = 1'
+        sql = 'update t_spider_state set userinfostate = 1'
         db.insert_operation(conn,sql)
         print '------userinfo_spider closed------'
 
@@ -93,7 +98,7 @@ class WeiboSpider(CrawlSpider):
     def get_userinfo(self,response):
         db = OracleStore()
         conn = db.get_connection()
-        ##sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
+        #sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
         #sql1 = '''select * from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
         #cursor1 = db.select_operation(conn,sql1)
 
@@ -136,112 +141,3 @@ class WeiboSpider(CrawlSpider):
             item['image_urls'] = ' '
         item['uid'] = response.meta['uid']
         return item
-######################################################################
-
-#    def get_follow(self,response):
-#        getweibopage = GetWeibopage()
-#        for page in range(WeiboSpider.follow_page_num,0,-1):
-#            GetWeibopage.followdata['Pl_Official_RelationMyfollow__108_page'] = page
-#            follow_url = getinfo.get_url(WeiboSpider.start_uid) + getweibopage.get_followurl()
-#            yield Request(url=follow_url,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_follow)
-#
-#
-#    def parse_follow(self,response):
-#        #print '************************ source request url:',response.request.url
-#        item = WeibospiderItem()
-#        analyzer = Analyzer()
-#        total_pq = analyzer.get_followhtml(response.body)
-#        #item['followuidlist'] = analyzer.get_follow(total_pq) 
-#        followlist = analyzer.get_follow(total_pq)
-#        #item['userinfo'] = {} 
-#        oldflag,stopflag= getinfo.get_followflag(WeiboSpider.filename)
-#
-#        p = re.compile('.*_page=(\d).*',re.S)
-#        current_page = p.search(response.request.url).group(1)  #获取当前关注用户列表页页数
-#        
-#        if int(current_page) == 1:
-#            getinfo.set_followflag(WeiboSpider.filename,followlist[0],'False')
-#            print 'page is equal 1 '
-#        else:
-#            print 'page is NOT equal 1'
-#        
-#        for follow_uid in followlist[:2]:
-#            print '%%%%%%%%%%%%%%%%%%%%%%%%%%',follow_uid
-#            #item['uid'] = follow_uid
-#            if follow_uid != oldflag:                       #对于已爬uid不进行重复爬取，即增量爬取
-#                #爬取该uid用户主页微博内容
-#                if stopflag == 'False':
-#                    getinfo.set_followflag(WeiboSpider.filename,followlist[0],'True')
-#                    mainpageurl = 'http://weibo.com/u/'+str(follow_uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-#                    GetWeibopage.data['uid'] = follow_uid
-#                    getweibopage = GetWeibopage()
-#                    for page in range(WeiboSpider.page_num):
-#                        GetWeibopage.data['page'] = page+1
-#                        #当页第一次加载
-#                        #当页第二次加载
-#                        #当页第三次加载
-#                        thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-#                        if int(GetWeibopage.data['pagebar']) == 1 and page == WeiboSpider.page_num-1:    #在最后一页最后一次加载时，获取用户基本信息
-#                            print 'hhhhhhhhhhhhhhhhhhhh',followlist
-#                            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'item':item,'uid':follow_uid,'followlist':followlist},callback=self.get_userurl)
-#                            #continue
-#                        #yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'item':item,'uid':follow_uid},callback=self.parse_thirdload)
-#
-#                        #firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-#                        #yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'item':item,'uid':follow_uid},callback=self.parse_firstload)
-#                else:
-#                    break
-#            else:
-#                break
-#
-#    def start_getweiboinfo(self,response):
-#        mainpageurl = 'http://weibo.com/u/'+str(WeiboSpider.start_uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-#        GetWeibopage.data['uid'] = WeiboSpider.start_uid
-#        getweibopage = GetWeibopage()
-#        for page in range(WeiboSpider.page_num): 
-#            GetWeibopage.data['page'] = page+1
-#            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-#            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_firstload)
-#
-#            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-#            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_secondload)
-#           
-#            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-#            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar']},callback=self.parse_thirdload)
-#        
-#    def parse_firstload(self,response):
-#        item = response.meta['item']
-#        item['uid'] = response.meta['uid']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-#
-#    def parse_secondload(self,response):
-#        item = response.meta['item']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-#
-#    def parse_thirdload(self,response):        
-#        item = response.meta['item']
-#        #print 'UUUUUUUUUUUUUUUUUUUUUUUUU',response.meta['item'],'OOOOOOOOOOOOOOOOOOO',item['userinfo'],"PPPPPPPPPPPPPPPPPPPPP"
-#        item['uid'] = response.meta['uid']
-#        item['followuidlist'] = response.meta['followlist']
-#        #item['userinfo'] = response.meta['userinfo']
-#        #print '{{{{{{{{{{{{{{{{{{{{{{{',response.meta['userinfo']
-#        analyzer = Analyzer()
-#        total_pq =  analyzer.get_mainhtml(response.body)
-#        item['content'] = analyzer.get_content(total_pq)
-#        item['time'] = analyzer.get_time(total_pq)
-#        item['atuser'],item['repostuser'] = analyzer.get_atuser_repostuser(total_pq)
-#        return item
-#
-#    

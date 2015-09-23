@@ -12,7 +12,8 @@ class FriendCircle:
         result_list = []
         p=re.compile('@(.*?) ',re.S)
         for atuser_info in atuser_info_list:
-            result_list.append({}.fromkeys(p.findall(str(atuser_info)+" "),""))
+#            result_list.append({}.fromkeys(p.findall(str(atuser_info)+" "),""))
+            result_list.append(p.findall(str(atuser_info)+" "))
         return result_list
 
 
@@ -21,14 +22,14 @@ class FriendCircle:
         analyzer = Analyzer()
         tmp_dict = {}
         for atuser_dict in atuser_list:
-            if atuser_dict != []:
+            if atuser_dict != {}:
                 for key in atuser_dict.keys():
                     if not tmp_dict.has_key(key):
                         response = urllib2.urlopen("http://s.weibo.com/user/"+quote(quote(str(key)))+"&Refer=SUer_box")  
-                        total_pq = analyzer.get_html(response.read(),'script:contains("W_texta")') 
-                        uid = self.get_user_uid(total_pq)
-                        atuser_dict[key] = uid
-                        tmp_dict[key] = uid
+                        #total_pq = analyzer.get_html(response.read(),'script:contains("W_texta")') 
+                        #uid = self.get_user_uid(total_pq)
+                        #atuser_dict[key] = uid
+                        #tmp_dict[key] = uid
                     else:
                         atuser_dict[key] = tmp_dict[key]
             else:
@@ -41,7 +42,6 @@ class FriendCircle:
         repostuser_uid_list = []
         for repostuser_nickname in repostuser_list:
             if repostuser_nickname != "":
-                print "!!!!!http://s.weibo.com/user/"+quote(quote(str(repostuser_nickname)))+"&Refer=SUer_box"
                 response =  urllib2.urlopen("http://s.weibo.com/user/"+quote(quote(str(repostuser_nickname)))+"&Refer=SUer_box") 
                 total_pq = analyzer.get_html(response.read(),'script:contains("W_texta")') 
                 uid = self.get_user_uid(total_pq)
@@ -53,9 +53,13 @@ class FriendCircle:
 
     def get_user_uid(self,total_pq):
         '''获得@用户uid'''
-        tmp = total_pq("p.person_name")
-        uid = pq(pq(tmp)[0]).find('a').eq(0).attr('uid')
+        tmp = total_pq("img.W_face_radius")
+        src = pq(pq(pq(tmp)[0]).outerHtml()).attr('src')
+        p=re.compile('cn/(.*?)/',re.S)
+        match = p.search(src)
+        if match:
+            uid = match.group(1)
+        else:
+            uid = ""
         return uid
 
-
-         

@@ -150,7 +150,7 @@ class WeiboSpider(CrawlSpider):
 
             for follow_uid in item['follow_uid_list']:
                 #获取关注用户的关注用户
-                sql1 = """select count(*) from "t_user_follow" where "userID"='%s'""" % str(follow_uid)
+                sql1 = """select count(*) from t_user_follow where userID=%s""" % str(follow_uid)
                 cursor1 = db.select_operation(conn,sql1)
                 count1 = cursor1.fetchone()
                 follow_scraped = count1[0]
@@ -163,7 +163,7 @@ class WeiboSpider(CrawlSpider):
                     yield None
 
                 #获取关注用户的粉丝用户
-                sql2 = """select count(*) from "t_user_follower" where "userID"='%s'""" % str(follow_uid)
+                sql2 = """select count(*) from t_user_follower where userID=%s""" % str(follow_uid)
                 cursor2 = db.select_operation(conn,sql2)
                 count2 = cursor2.fetchone()
                 follower_scraped = count2[0]
@@ -196,7 +196,7 @@ class WeiboSpider(CrawlSpider):
 
             for follower_uid in item['follower_uid_list']:
                 #获取粉丝用户的关注用户
-                sql1 = """select count(*) from "t_user_follow" where "userID"='%s'""" % str(follower_uid)
+                sql1 = """select count(*) from t_user_follow where userID=%s""" % str(follower_uid)
                 cursor1 = db.select_operation(conn,sql1)
                 count1 = cursor1.fetchone()
                 follower_scraped = count1[0]
@@ -209,7 +209,7 @@ class WeiboSpider(CrawlSpider):
                     yield None
 
                 #获取粉丝用户的粉丝用户
-                sql2 = """select count(*) from "t_user_follower" where "userID"='%s'""" % str(follower_uid)
+                sql2 = """select count(*) from t_user_follower where userID=%s""" % str(follower_uid)
                 cursor2 = db.select_operation(conn,sql2)
                 count2 = cursor2.fetchone()
                 follower_scraped = count2[0]

@@ -1,21 +1,28 @@
 # -*- coding: utf-8 -*-
+#python标准模块
+import re
+import base64
+import rsa
+import binascii
+import logging
+from urllib import quote
+#python第三方模块
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.http import Request,FormRequest
 from scrapy.utils.project import get_project_settings
 from weibospider.items import WeibospiderItem
-import re
-import base64
-import rsa
-import binascii
-import time
+from settings import USER_NAME
+#应用程序自定义模块
 import getinfo
 from getpageload import GetWeibopage
 from analyzer import Analyzer
-from settings import USER_NAME
 from friendcircle import FriendCircle
 from dataoracle import OracleStore
+
+logger = logging.getLogger(__name__)
+
 
 class WeiboSpider(CrawlSpider):
     name = 'keyweibocontent'
@@ -29,17 +36,24 @@ class WeiboSpider(CrawlSpider):
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
 
-
     def __init__(self,uid = None):
         #self.keyword = keyword
         self.uid = uid
+        self.atuser_dict = {}
 
     def closed(self,reason):
         db = OracleStore()
         conn = db.get_connection()
-        sql = '''update "t_spider_state" set "contentstate" = 1'''
+        cur = conn.cursor()
+        for key in self.atuser_dict.keys(): #插入@用户uid信息
+            sql= """update t_user_weibocontent_atuser set atuserID = %s where userID = %s and atuser = '%s'""" % (self.atuser_dict.get(key),self.uid,key)
+            cur.execute(sql)
+            conn.commit()
+
+        sql = '''update t_spider_state set contentstate = 1'''
         db.insert_operation(conn,sql)
-        print '------keyweibocontent_spider closed------'                                                                                                                  
+        #logger.info('------keyweibocontent_spider closed------')                                                                                                                 
+        print '------keyweibocontent_spider closed------'                                                                                                               
     
     def start_requests(self):
         username = WeiboSpider.start_username
@@ -116,10 +130,10 @@ class WeiboSpider(CrawlSpider):
             yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
 
             secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-            #yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
+            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
            
             thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-            #yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
+            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
 
 #        else:
 #            yield None
@@ -132,11 +146,35 @@ class WeiboSpider(CrawlSpider):
         total_pq =  analyzer.get_mainhtml(response.body)
         item['uid'] = response.meta['uid']
         item['content'] = analyzer.get_content(total_pq)
-        item['time'] = analyzer.get_time(total_pq)
+        item['time'],item['timestamp'] = analyzer.get_time(total_pq)
         atuser_info,item['repost_user'] = analyzer.get_atuser_repostuser(total_pq)
         atuser_list = friendcircle.atuser_parser(atuser_info)
-        item['atuser_nickname_uid'] = friendcircle.atuser_uid_parser(atuser_list)
-        item['repostuser_uid'] = friendcircle.repostuser_uid_parser(item['repost_user'])
-        return item
+        item['atuser_nickname_list'] = atuser_list
+        #item['atuser_uid']= ""
+        yield item
+       
+        for atuser_inlist in atuser_list:
+            if atuser_inlist != []:
+                for atuser in atuser_inlist:
+                    uid_url = "http://s.weibo.com/user/"+quote(quote(str(atuser)))+"&Refer=SUer_box"
+                    yield Request(url=uid_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid,'atuser_nickname':atuser},callback=self.atuser_uid_parser)
+            else:
+                continue
+
+        #item['atuser_nickname_uid'] = friendcircle.atuser_uid_parser(atuser_list)
+        #item['repostuser_uid'] = friendcircle.repostuser_uid_parser(item['repost_user'])
+        #return item
+
+    def atuser_uid_parser(self,response):
+        item = WeibospiderItem()
+        analyzer = Analyzer()
+        friendcircle = FriendCircle()
+        total_pq = analyzer.get_html(response.body,'script:contains("W_face_radius")') 
+        uid = friendcircle.get_user_uid(total_pq)
+        self.atuser_dict[response.meta['atuser_nickname']] = uid
+        #item['atuser_uid'] = uid
+        #item['uid'] = response.meta['uid']
+        #item['atuser_nickname'] = response.meta['atuser_nickname']
+        #yield item
 
 
