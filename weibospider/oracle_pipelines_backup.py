@@ -44,8 +44,8 @@ class WeibospiderPipeline(object):
 
     def open_spider(self,spider):
         #获取数据库中微博内容最新时间戳
-        if spider.name in ('keyweibocontent','weibocontent_userinfo','weibocontent_danger'):
-            db=OracleStore();conn = db.get_connection()
+        db=OracleStore();conn = db.get_connection()
+        if spider.name == 'keyweibocontent':
             sql = "select * from t_user_weibocontent where userID = '%s' order by publishTimeStamp desc" % str(spider.uid) 
             cursor = db.select_operation(conn,sql)
             count = cursor.fetchone()
@@ -53,9 +53,9 @@ class WeibospiderPipeline(object):
                 WeibospiderPipeline.weibocontent_timestamp = None
             else:
                 WeibospiderPipeline.weibocontent_timestamp = count[6] #获取数据库中最新的时间戳（publishTimeStamp）字段 
+            #print '!!!!!!!!!!!',WeibospiderPipeline.weibocontent_timestamp
             db.close_connection(conn,cursor)
         if spider.name == 'keyuser':
-            db=OracleStore();conn = db.get_connection()
             sql = "select * from t_user_keyword where keyword = '%s' order by publishTimeStamp desc" % str(spider.keyword) 
             cursor = db.select_operation(conn,sql)
             count = cursor.fetchone()
@@ -63,6 +63,7 @@ class WeibospiderPipeline(object):
                 WeibospiderPipeline.keyword_timestamp = None
             else:
                 WeibospiderPipeline.keyword_timestamp = count[4] #获取数据库中最新的时间戳（publishTimeStamp）字段 
+            #print '!!!!!!!!!!!',WeibospiderPipeline.keyword_timestamp
             db.close_connection(conn,cursor)
 
 
@@ -73,13 +74,10 @@ class WeibospiderPipeline(object):
             d = self.dbpool.runInteraction(self._weibocontent_danger_insert,item,spider)  
         elif spider.name == 'userfollow':
             d = self.dbpool.runInteraction(self._userfollow_insert,item,spider)  
-        elif spider.name == 'userinfo' or spider.name == 'userinfo_list':     #'userphoto':
+        elif spider.name == 'userinfo':     #'userphoto':
             d = self.dbpool.runInteraction(self._userinfo_insert,item,spider)  
-        elif spider.name == 'keyuser':
+        else: #spider.name == 'keyuser':
             d = self.dbpool.runInteraction(self._keyuser_insert,item,spider)
-        else: #weibocontent_userinfo
-            d = self.dbpool.runInteraction(self._weibocontent_userinfo_insert,item,spider)
-
         d.addErrback(self._handle_error,item,spider) 
         d.addBoth(lambda _:item)
         return d
@@ -96,19 +94,52 @@ class WeibospiderPipeline(object):
 
     def _keyweibocontent_insert(self,conn,item,spider):
         #插入发表微博内容和时间
-        self._weibocontent_item_insert(conn,item,'atuser')
+        if not WeibospiderPipeline.weibocontent_timestamp: #此时值为None，即数据库中没有该用户微博及时间戳
+            for i in range(len(item['content'])):
+                if "'" in item['content'][i]:
+                    content_tmp = item['content'][i].replace("'","\'")
+                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+                else:
+                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+
+                if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
+                    for atuser in item['atuser_nickname_list'][i]:
+                        conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
+        
+        else:
+            for i in range(len(item['content'])):
+                if item['timestamp'][i] > WeibospiderPipeline.weibocontent_timestamp: #插入更新后的微博内容
+                    if "'" in item['content'][i]:
+                        content_tmp = item['content'][i].replace("'","\'")
+                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+                    else:
+                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+
+                    if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
+                        for atuser in item['atuser_nickname_list'][i]:
+                            conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
+
+#            conn.execute("""update t_user_weibocontent_atuser set atuserID = %s where userID = %s and atuser = '%s'""" % (str(item['atuser_uid']),str(item['uid']),item['atuser_nickname']))
 
 
     def _weibocontent_danger_insert(self,conn,item,spider):
-        #爬取微博计算危险人物
-        self._weibocontent_item_insert(conn,item,'origin')
-
-    def _weibocontent_userinfo_insert(self,conn,item,spider):
-        #插入用户个人基本信息及微博
-        if 'userinfo' in item:   #判断item中是否有userinfo字段
-            self._userinfo_insert(conn,item,spider)
+        if not WeibospiderPipeline.weibocontent_timestamp: #此时值为None，即数据库中没有该用户微博及时间戳
+            for i in range(len(item['content'])):
+                if "'" in item['content'][i]:
+                    content_tmp = item['content'][i].replace("'","\'")
+                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+                else:
+                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+        
         else:
-            self._weibocontent_item_insert(conn,item,'atuser')
+            for i in range(len(item['content'])):
+                if item['timestamp'][i] > WeibospiderPipeline.weibocontent_timestamp: #插入更新后的微博内容
+                    if "'" in item['content'][i]:
+                        content_tmp = item['content'][i].replace("'","\'")
+                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+                    else:
+                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
+
 
 
     def _userinfo_insert(self,conn,item,spider):
@@ -140,30 +171,4 @@ class WeibospiderPipeline(object):
     def _handle_error(self,failure,item,spider):
         logging.error(failure)
 
-        
-    def _weibocontent_item_insert(self,conn,item,type):
-        if not WeibospiderPipeline.weibocontent_timestamp: #此时值为None，即数据库中没有该用户微博及时间戳
-            for i in range(len(item['content'])):
-                if "'" in item['content'][i]:
-                    content_tmp = item['content'][i].replace("'","\'")
-                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
-                else:
-                    conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
-                if type == 'atuser':
-                    if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
-                        for atuser in item['atuser_nickname_list'][i]:
-                            conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
-        
-        else:
-            for i in range(len(item['content'])):
-                if item['timestamp'][i] > WeibospiderPipeline.weibocontent_timestamp: #插入更新后的微博内容
-                    if "'" in item['content'][i]:
-                        content_tmp = item['content'][i].replace("'","\'")
-                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
-                    else:
-                        conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])
-                    if type == 'atuser':
-                        if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
-                            for atuser in item['atuser_nickname_list'][i]:
-                                conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
-        
+         

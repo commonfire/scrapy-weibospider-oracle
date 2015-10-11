@@ -14,8 +14,7 @@ BOT_NAME = 'weibospider'
 SPIDER_MODULES = ['weibospider.spiders']
 NEWSPIDER_MODULE = 'weibospider.spiders'
 ITEM_PIPELINES={#'weibospider.pipelines.WeibospiderPipeline':300}
-                #'weibospider.user_imagepipelines.UserImagesPipeline':1}
-                #'scrapy.piplines.images.ImagesPipline':1}
+                'weibospider.user_imagepipelines.UserImagesPipeline':400, 
                 'weibospider.oracle_pipelines.WeibospiderPipeline':300
                }
 #Mysql数据库配置
@@ -30,7 +29,7 @@ ORACLE_USER = 'bupt'       #'ZTQ'
 ORACLE_PASSWD = 'bupt'     #'fnl12345678'
 
 #微博爬取内容配置
-USER_NAME = '18611240462'
+USER_NAME = '18600299007'    #'18611240462'
 PASS_WORD = '19911007'
 UID = '2728266823'   #'3655612552'  #'2728266823'
 PAGE_NUM = 1   #爬取微博内容页面数
@@ -41,9 +40,10 @@ FOLLOWER_PAGE_NUM = 1  #爬取用户粉丝列表页面数
 SEARCH_PAGE_NUM = 1  #爬取基于关键词搜索的页面数
 
 #图片下载配置
-IMAGES_STORE = '/home/zjd/scrapy-weibospider/weibospider/userphoto'  #图片存储位置
+#IMAGES_STORE = '/home/hadoop_user/scrapy-weibospider/weibospider/userphoto'  #图片存储位置
+IMAGES_STORE = '/home/hadoop_user/javaproject/weiboanalysis-1/WebContent/images/userphoto'  #图片存储位置
 IMAGES_EXPIRES = 90          #图片失效期限天数
-IMAGES_THUMBS = {'small':(50,50)}  #设置图片缩略图长和宽度
+IMAGES_THUMBS = {'small':(40,40)}  #设置图片缩略图长度和宽度
 
 #User-Agent 或代理IP轮换
 USER_AGENTS = [
@@ -72,7 +72,6 @@ PROXIES = [
 ] 
 
 
-
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'weibospider (+http://www.yourdomain.com)'
 
@@ -82,7 +81,7 @@ PROXIES = [
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 5 
+DOWNLOAD_DELAY = 10 
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN=16
 #CONCURRENT_REQUESTS_PER_IP=16

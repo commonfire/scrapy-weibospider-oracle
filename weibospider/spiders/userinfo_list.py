@@ -13,7 +13,6 @@ from scrapy.http import Request,FormRequest
 from scrapy.utils.project import get_project_settings
 from weibospider.items import WeibospiderItem
 from scrapy.settings import Settings
-from scrapy.conf import settings
 from settings import USER_NAME
 #应用程序自定义模块
 import getinfo
@@ -24,9 +23,7 @@ from getpageload import GetWeibopage
 logger = logging.getLogger(__name__)
 
 class WeiboSpider(CrawlSpider):
-    #settings.set('ITEM_PIPELINES',{'weibospider.user_imagepipelines.UserImagesPipeline':1,'weibospider.oracle_pipelines.WeibospiderPipeline':300},priority='spider')
-    #ITEM_PIPELINES = {'weibospider.user_imagepipelines.UserImagesPipeline':1,'weibospider.oracle_pipelines.WeibospiderPipeline':300}
-    name = 'userinfo'
+    name = 'userinfo_list'
     allowed_domains = ['weibo.com','sina.com.cn']
     settings = get_project_settings()
     #start_username = settings['USER_NAME']
@@ -36,8 +33,9 @@ class WeiboSpider(CrawlSpider):
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
-    def __init__(self,uid = None):
-        self.uid = uid
+    def __init__(self,uid_listformat = None):
+        print '!!!!!!!!!!!!!',uid_listformat
+        self.uid_list = list(eval(uid_listformat))
 
 #    @classmethod
 #    def from_crawler(cls,crawler,uid = None):
@@ -49,7 +47,7 @@ class WeiboSpider(CrawlSpider):
         db = OracleStore();conn = db.get_connection()
         sql = 'update t_spider_state set userinfostate = 1'
         db.insert_operation(conn,sql)
-        print '------userinfo_spider closed------'
+        print '------userinfo_list_spider closed------'
 
     def start_requests(self):
         username = WeiboSpider.start_username
@@ -104,29 +102,22 @@ class WeiboSpider(CrawlSpider):
 
 ##########################获取用户基本信息#############################
     def get_userinfo(self,response):
-        #db = OracleStore();conn = db.get_connection()
-        #sql1 = "select * from t_user_keyword where keyword = '%s'" % str(self.keyword)
-        #sql1 = '''select * from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
-        #cursor1 = db.select_operation(conn,sql1)
-
-        ##sql2 = "select count(*) from t_user_keyword where keyword = '%s'" % str((self.keyword))
-        #sql2 = '''select count(*) from "t_user_keyword" where "keyword"='%s' and "userID" not in (select a."userID" from "t_user_keyword" a, "t_user_info" b where a."keyword" = '%s' and a."userID" = b."userID")''' % (str(self.keyword),str(self.keyword))
-        #cursor2 = db.select_operation(conn,sql2)
-        #count = cursor2.fetchone()
-        
-        #if count[0]:  #count[0]不为0，即有查询结果
-        #    for i in range(1):    #(count[0]):
-        #        for result in cursor1.fetchmany(1):
-        #            if result[0]:
-        mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-        GetWeibopage.data['uid'] = self.uid     #result[0]
-        getweibopage = GetWeibopage()
-        GetWeibopage.data['page'] = 1
-        firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-        yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.get_userurl)
-        #else:
-        #    yield None
-        #db.close_connection(conn,cursor1,cursor2)
+        db = OracleStore();conn = db.get_connection()
+        for uid in self.uid_list:
+            sql = "select count(*) from t_user_info where userID='%s'" % uid
+            cursor = db.select_operation(conn,sql);count = cursor.fetchone()
+            if not count[0]:   #没有爬取过该uid用户
+                print "!!scraping each uid:",uid
+                mainpageurl = 'http://weibo.com/u/'+str(uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+                GetWeibopage.data['uid'] = uid     #result[0]
+                getweibopage = GetWeibopage()
+                GetWeibopage.data['page'] = 1
+                firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+                yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':uid},callback=self.get_userurl)
+            else:
+                yield None
+            cursor.close()
+        db.close_connection(conn)
 
     def get_userurl(self,response):
         analyzer = Analyzer()

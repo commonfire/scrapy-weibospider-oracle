@@ -43,4 +43,3 @@ class OracleStore:
         cur = conn.cursor()
         cur.execute(sql)
         return cur
-

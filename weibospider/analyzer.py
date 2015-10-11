@@ -14,7 +14,7 @@ class Analyzer:
         self.follower_list = []     #某用户粉丝列表
         self.follow_list = []       #某用户关注列表
         self.childfollow_list = []  #某子用户关注列表
-        self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),' ')
+        self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')
         self.keyuser_id = []         #与某关键词相关的用户uid
         self.keyuser_alias = []      #与某关键词相关的用户昵称
         self.keyuser_time = []       #与某关键词相关用户uid发表内容的时间
@@ -120,8 +120,8 @@ class Analyzer:
                     self.repostuser_list.append('')
         return self.atuser_list,self.repostuser_list
 
-
 ######################################获取粉丝列表########################################
+
     def get_followerhtml(self,total):
         '''获取粉丝列表页面中html内容'''	
         total_pq = pq(unicode(total)) 
@@ -235,7 +235,8 @@ class Analyzer:
             user_li = total_pq("div.WB_innerwrap").eq(0).children(".m_wrap").children("ul").find('li')
             for li in user_li:
                 li = pq(li)
-                self.userinfo_dict[li.find('span').eq(0).text()] = li.find('span').eq(1).text()
+                #self.userinfo_dict[li.find('span').eq(0).text()] = li.find('span').eq(1).text()
+                self.userinfo_dict[li.find('span').eq(0).text()] = re.sub('\n','',li.find('span').eq(1).text())    
         except Exception,e:
            raise e 
             
@@ -270,8 +271,4 @@ class Analyzer:
             self.keyuser_time.append(time)
             self.keyuser_timestamp.append(timestamp)
         return self.keyuser_id,self.keyuser_alias,self.keyuser_time,self.keyuser_timestamp
-
-
-
-    
 
