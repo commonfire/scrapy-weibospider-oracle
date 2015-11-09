@@ -34,7 +34,7 @@ class UserImagesPipeline(ImagesPipeline):
 
 
     def get_media_requests(self,item,info):
-        if 'image_urls' in item:
+        if 'image_urls' in item and item['image_urls']: #item中有image_urls字段且其不为None
             image_url = item['image_urls']
             yield scrapy.Request(image_url)
 

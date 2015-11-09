@@ -14,7 +14,8 @@ class Analyzer:
         self.follower_list = []     #某用户粉丝列表
         self.follow_list = []       #某用户关注列表
         self.childfollow_list = []  #某子用户关注列表
-        self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')
+        self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')  #获取非公众账号基本信息
+        self.public_userinfo_dict = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')  #获取公众账号基本信息
         self.keyuser_id = []         #与某关键词相关的用户uid
         self.keyuser_alias = []      #与某关键词相关的用户昵称
         self.keyuser_time = []       #与某关键词相关用户uid发表内容的时间
@@ -224,23 +225,51 @@ class Analyzer:
    
     
     def get_userinfohref(self,total_pq):
-        '''获取微博用户的个人信息请求链接'''
+        '''获取微博非公众账号用户的个人信息请求链接'''
         href = total_pq("div.PCD_person_info").children('a').attr('href')
         url = "http://weibo.com"+href
         return url
 
+    def get_public_userinfohref(self,total_pq):
+        '''获取微博公众账号用户的个人信息请求链接'''
+        href = total_pq("div.PCD_person_info").children('a').attr('href')
+        return href
+        
+
     def get_userinfo(self,total_pq):
-        '''解析微博用户个人详细信息'''
-        try:
-            user_li = total_pq("div.WB_innerwrap").eq(0).children(".m_wrap").children("ul").find('li')
-            for li in user_li:
-                li = pq(li)
-                #self.userinfo_dict[li.find('span').eq(0).text()] = li.find('span').eq(1).text()
-                self.userinfo_dict[li.find('span').eq(0).text()] = re.sub('\n','',li.find('span').eq(1).text())    
-        except Exception,e:
-           raise e 
-            
+        '''解析微博非公众用户个人详细信息'''
+        user_li = total_pq("div.WB_innerwrap").eq(0).children(".m_wrap").children("ul").find('li')
+        for li in user_li:
+            li = pq(li)
+            #self.userinfo_dict[li.find('span').eq(0).text()] = li.find('span').eq(1).text()
+            self.userinfo_dict[li.find('span').eq(0).text()] = re.sub('\n','',li.find('span').eq(1).text())    
         return self.userinfo_dict
+
+    def get_public_userinfo(self,total_pq):
+        '''解析微博公众用户个人详细信息'''
+        user_li = total_pq("div.WB_innerwrap").eq(0).children(".m_wrap").children("ul").find('li')
+        for li in user_li:
+            li = pq(li)
+            if li.find('span').eq(0).text() == "友情链接：":
+                link_list = []
+                list = li.find('span').eq(1).find('a')
+                for a in list:
+                    link_list.append(pq(a).text())
+                self.public_userinfo_dict['友情链接：'.decode('utf-8')] = link_list 
+            else:
+                self.public_userinfo_dict[li.find('span').eq(0).text()] = re.sub('\n','',li.find('span').eq(1).text())    
+        return self.public_userinfo_dict
+
+
+    def get_userproperty(self,total_pq):
+        '''获取用户属性（V字认证，达人）''' 
+        property = total_pq("span.icon_bed").children("a").attr("class")
+        if property: # property不为None
+            list = property.split(" ")
+            return list[1]
+        else:
+            return ''
+     
 
     def get_userphoto_url(self,total_pq):
         '''获取微博用户头像的url地址'''

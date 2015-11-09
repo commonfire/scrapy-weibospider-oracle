@@ -113,15 +113,24 @@ class WeibospiderPipeline(object):
 
     def _userinfo_insert(self,conn,item,spider):
         #将微博用户个人信息插入数据库 
-        if 'png' not in item['image_urls']:
-            imageurl = "images/userphoto/full/"+str(item['uid'])+".jpg"
-            thumbnail_url = "images/userphoto/thumbs/small/"+str(item['uid'])+"_thumbnail.jpg" 
+        if item['image_urls']:  #item['image_urls']不为None
+            if 'png' not in item['image_urls']:
+                imageurl = "images/userphoto/full/"+str(item['uid'])+".jpg"
+                thumbnail_url = "images/userphoto/thumbs/small/"+str(item['uid'])+"_thumbnail.jpg" 
+            else:
+                tmp = item['image_urls']
+                imageurl = "images/userphoto/full/"+tmp[tmp.rindex('/')+1:tmp.rindex('.')]+".jpg"
+                thumbnail_url = "images/userphoto/thumbs/small/"+tmp[tmp.rindex('/')+1:tmp.rindex('.')]+"_thumbnail.jpg"
         else:
-            tmp = item['image_urls']
-            imageurl = "images/userphoto/full/"+tmp[tmp.rindex('/')+1:tmp.rindex('.')]+".jpg"
-            thumbnail_url = "images/userphoto/thumbs/small/"+tmp[tmp.rindex('/')+1:tmp.rindex('.')]+"_thumbnail.jpg"
-             
-        conn.execute('''insert into t_user_info(userID,userAlias,location,sex,blog,domain,brief,birthday,registertime,imageurl,thumbnailurl) values(:1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11)''',[str(item['uid']),item['userinfo']['昵称：'.decode('utf-8')],item['userinfo']['所在地：'.decode('utf-8')],item['userinfo']['性别：'.decode('utf-8')],item['userinfo']['博客：'.decode('utf-8')],item['userinfo'.decode('utf-8')]['个性域名：'.decode('utf-8')],item['userinfo']['简介：'.decode('utf-8')],item['userinfo']['生日：'.decode('utf-8')],item['userinfo']['注册时间：'.decode('utf-8')],imageurl,thumbnail_url])
+            imageurl = ''
+
+        user_property = item['user_property'] 
+
+        if user_property != 'icon_verify_co_v':
+            conn.execute('''insert into t_user_info(userID,userAlias,location,sex,blog,domain,brief,birthday,registertime,imageurl,thumbnailurl,property) values(:1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12)''',[str(item['uid']),item['userinfo']['昵称：'.decode('utf-8')],item['userinfo']['所在地：'.decode('utf-8')],item['userinfo']['性别：'.decode('utf-8')],item['userinfo']['博客：'.decode('utf-8')],item['userinfo'.decode('utf-8')]['个性域名：'.decode('utf-8')],item['userinfo']['简介：'.decode('utf-8')],item['userinfo']['生日：'.decode('utf-8')],item['userinfo']['注册时间：'.decode('utf-8')],imageurl,thumbnail_url,user_property])
+        else:
+            conn.execute('''insert into t_publicuser_info(userID,contacts,phonenum,email,link,property) values(:1,:2,:3,:4,:5,:6)''',[str(item['uid']),item['userinfo']['联系人：'.decode('utf-8')],item['userinfo']['电话：'.decode('utf-8')],item['userinfo']['邮箱：'.decode('utf-8')],item['userinfo']['友情链接：'.decode('utf-8')],user_property])
+#           conn.execute('''insert into t_publicuser_info(userID,contacts,phonenum,email,link,property) values(:1,:2,:3,:4,:5,:6)''',[str(item['uid']),item['userinfo']['联系人：'.decode('utf-8')],item['userinfo']['电话：'.decode('utf-8')],item['userinfo']['邮箱：'.decode('utf-8')],item['userinfo']['友情链接：'.decode('utf-8')],user_property])
         
         #conn.execute("update t_user_info set imagestate = 1 where userID = "+str(item['uid']))
         #conn.execute("update t_user_info set imageurl=:1,thumbnailurl=:2 where userID=:3",[imageurl,thumbnail_url,str(item['uid'])])

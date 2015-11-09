@@ -53,11 +53,12 @@ class WeiboSpider(CrawlSpider):
 
     def start_requests(self):
         username = WeiboSpider.start_username
+        username = getinfo.get_user(username)
         url = 'http://login.sina.com.cn/sso/prelogin.php?entry=sso&callback=sinaSSOController.preloginCallBack&su=%s&rsakt=mod&client=ssologin.js(v1.4.4)' % username
         return [Request(url=url,method='get',callback=self.post_requests)]
 
     def post_requests(self,response):
-        serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","exectime":.*}',response.body,re.I)[0]  #获取get请求的数据，用于post请求登录
+        serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","is_openlock":.*,"exectime":.*}',response.body,re.I)[0] #获取get请求的数据，用于post请求登录
         servertime = serverdata[0]
         nonce = serverdata[1]
         pubkey = serverdata[2]
@@ -131,10 +132,16 @@ class WeiboSpider(CrawlSpider):
     def get_userurl(self,response):
         analyzer = Analyzer()
         total_pq =  analyzer.get_html(response.body,'script:contains("PCD_person_info")')
-        userinfo_url = analyzer.get_userinfohref(total_pq)
-        return  Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_userinfo)
+        user_property = analyzer.get_userproperty(total_pq)
+        if user_property == 'icon_verify_co_v': #该账号为公众账号
+            public_userinfo_url = analyzer.get_public_userinfohref(total_pq)
+            yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo)
+        else:
+            userinfo_url = analyzer.get_userinfohref(total_pq)
+            yield Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_userinfo)
         
     def parse_userinfo(self,response):
+        '''解析非公众账号个人信息'''
         item = WeibospiderItem() 
         analyzer = Analyzer()
         try:
@@ -145,6 +152,25 @@ class WeiboSpider(CrawlSpider):
             item['userinfo'] = analyzer.get_userinfo(total_pq2)
         except Exception,e:
             item['userinfo'] = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')   
-            item['image_urls'] = ''
+            item['image_urls'] = None
         item['uid'] = response.meta['uid']
+        item['user_property'] = response.meta['user_property']
+        yield item
+
+    def parse_public_userinfo(self,response):
+        '''解析公众账号个人信息'''
+        item = WeibospiderItem()
+        analyzer = Analyzer()
+        try:
+            total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
+            item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+
+            total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
+            item['userinfo'] = analyzer.get_public_userinfo(total_pq2)
+        except Exception,e:
+            item['userinfo'] = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')   
+            item['image_urls'] = None
+
+        item['uid'] = response.meta['uid']
+        item['user_property'] = response.meta['user_property']
         yield item

@@ -26,6 +26,7 @@ class WeibospiderItem(Item):
     
     userinfo = Field()             #用户基本信息
     image_urls = Field()           #用户头像图片链接
+    user_property = Field()        #用户属性，如达人，公众账号
     
     keyword_uid = Field()          #与关键词相关的用户uid
     keyword_alias = Field()        #与关键词相关的用户uid

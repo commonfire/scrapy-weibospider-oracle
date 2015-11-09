@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class WeiboSpider(CrawlSpider):
+    '''输入用户uid，获取用法发表微博内容，主要用于关键词搜索出的用户'''
     name = 'keyweibocontent'
     allowed_domains = ['weibo.com','sina.com.cn']
     settings = get_project_settings()
@@ -57,11 +58,12 @@ class WeiboSpider(CrawlSpider):
     
     def start_requests(self):
         username = WeiboSpider.start_username
+        username = getinfo.get_user(username)
         url = 'http://login.sina.com.cn/sso/prelogin.php?entry=sso&callback=sinaSSOController.preloginCallBack&su=%s&rsakt=mod&client=ssologin.js(v1.4.4)' % username
         return [Request(url=url,method='get',callback=self.post_requests)]
 
     def post_requests(self,response):
-        serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","exectime":.*}',response.body,re.I)[0]  #获取get请求的数据，用于post请求登录
+        serverdata = re.findall('{"retcode":0,"servertime":(.*?),"pcid":.*?,"nonce":"(.*?)","pubkey":"(.*?)","rsakv":"(.*?)","is_openlock":.*,"exectime":.*}',response.body,re.I)[0] #获取get请求的数据，用于post请求登录
         servertime = serverdata[0]
         nonce = serverdata[1]
         pubkey = serverdata[2]

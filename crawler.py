@@ -16,16 +16,16 @@ runner = CrawlerRunner(settings)
 @defer.inlineCallbacks
 
 def crawl():
-    if sys.argv[2] == 'keyuser':
+    if sys.argv[2] == 'keyuser':  #根据关键词搜索相关用户
         yield runner.crawl('keyuser',keyword = sys.argv[1])
-    elif sys.argv[2] == 'keyweibocontent':
+    elif sys.argv[2] == 'keyweibocontent':  #查询关键词用户微博内容
         yield runner.crawl('keyweibocontent',uid = sys.argv[1])
-    elif sys.argv[2] == 'weibocontent_userinfo':
+    elif sys.argv[2] == 'weibocontent_userinfo':  #查询用户微博内容及基本信息
         yield runner.crawl('weibocontent_userinfo',uid = sys.argv[1])
-    elif sys.argv[2] == 'userinfo_list':
+    elif sys.argv[2] == 'userinfo_list':  #根据uidlist查询用户个人信息
         yield runner.crawl('userinfo_list',uid_listformat = sys.argv[1])
     else:
-        yield runner.crawl('userinfo',uid = sys.argv[1]) 
+        yield runner.crawl('userinfo',uid = sys.argv[1]) # 查询用户个人信息
     reactor.stop()
 
 crawl()
