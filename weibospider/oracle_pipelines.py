@@ -165,7 +165,7 @@ class WeibospiderPipeline(object):
         
         else:
             for i in range(len(item['content'])):
-                if item['timestamp'][i] > WeibospiderPipeline.weibocontent_timestamp: #插入更新后的微博内容
+                if item['timestamp'][i] > WeibospiderPipeline.weibocontent_timestamp: #插入大于当前时间戳，即更新后的微博内容
                     if "'" in item['content'][i]:
                         content_tmp = item['content'][i].replace("'","\'")
                         conn.execute('''insert into t_user_weibocontent(userID,content,publishTime,repostuser,id,publishTimeStamp) values(:1,:2,to_date(:3,'YYYY-MM-DD HH24:MI'),:4,(select nvl(MAX(id),0)+1 as "id" from t_user_weibocontent),:5)''',[str(item['uid']),item['content'][i],item['time'][i],item['repost_user'][i],item['timestamp'][i]])

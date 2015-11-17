@@ -8,16 +8,18 @@ from scrapy.utils.log import configure_logging
 from scrapy.utils.project import get_project_settings
 reload(sys)
 sys.setdefaultencoding('utf-8')
-
-configure_logging
-settings = get_project_settings()
-runner = CrawlerRunner(settings)
-
+try:    
+    configure_logging
+    settings = get_project_settings()
+    runner = CrawlerRunner(settings)
+except Exception,e:
+    print e
+    
 @defer.inlineCallbacks
 
 def crawl():
     if sys.argv[2] == 'keyuser':  #根据关键词搜索相关用户
-        yield runner.crawl('keyuser',keyword = sys.argv[1])
+        yield runner.crawl('keyuser',keyword=sys.argv[1])
     elif sys.argv[2] == 'keyweibocontent':  #查询关键词用户微博内容
         yield runner.crawl('keyweibocontent',uid = sys.argv[1])
     elif sys.argv[2] == 'weibocontent_userinfo':  #查询用户微博内容及基本信息
@@ -28,5 +30,8 @@ def crawl():
         yield runner.crawl('userinfo',uid = sys.argv[1]) # 查询用户个人信息
     reactor.stop()
 
-crawl()
-reactor.run()
+try:
+    crawl()
+    reactor.run()
+except Exception,e:
+    print e

@@ -46,13 +46,16 @@ class Analyzer:
             d = pq(d)
             if '//' in d.text():   #用户发表微博存在"转发"情况
                 p1=re.compile('(.*?)\s?//\s?<a',re.S)  #找出用户自己所发内容，不含//后面的转发内容
-                match = p1.search(d.html())
+                match = p1.search(d.outerHtml())
                 if match:
                     if(match.group(1).strip() == ''):  #发表内容为空
                         self.content_list.append('')
                     else:
+                        #print '!!!!!',match.group(1)
                         data_pq = pq(match.group(1))
+                        #print '~~~~~~~~~~~~',data_pq.outerHtml()
                         content = self.get_content_src(data_pq)
+                        print '1111111111', content
                         self.content_list.append(content)
                 else:
                     print "get_content wrong!"
@@ -74,7 +77,6 @@ class Analyzer:
                 else:
                     content.append(pq(parents).attr("title"))
         return ''.join(content)    #content列表转换为字符串
-
 	
     def get_time(self,total_pq):
         '''获取用户发表微博时间'''
@@ -94,11 +96,12 @@ class Analyzer:
         for au in user:
             au = pq(au)
             if '//' in au.text():     #存在"转发"可能
-                p1 = re.compile('(<a.*?</a>)\s?//',re.S)
+                #p1 = re.compile('(<a.*?</a>)\s?//',re.S)
+                p1 = re.compile('(.*?)\s?//\s?<a',re.S)  #获取第一个//之前的内容
                 match1 = p1.search(au.html())
-                if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#";可能会有多个，故返回一个list
-                    atuser_list = pq(match1.group(1))('a').text()   
-                    self.atuser_list.append(atuser_list)
+                if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#"
+                    atuser_set = pq(match1.group(1))('a').text()   
+                    self.atuser_list.append(atuser_set)
                 else:
                     self.atuser_list.append('')
                     
@@ -110,8 +113,8 @@ class Analyzer:
                     self.repostuser_list.append('')
 
             else:    #用户没有"转发"，直接发表微博
-                atuser_list1 = au.find('a').text()   #记录用户微博中的"@用户"和"微博主题#xxx#"
-                self.atuser_list.append(atuser_list1)
+                atuser_set1 = au.find('a').text()   #记录用户微博中的"@用户"和"微博主题#xxx#"
+                self.atuser_list.append(atuser_set1)
                 
                 repostuser = au.parents('div.WB_detail')  #记录微博用户中的@用户，情况2：第一转发者
                 ru = repostuser.find('div[node-type=feed_list_forwardContent]').find('a').eq(0).attr('nick-name') 

@@ -10,12 +10,11 @@ class OracleStore:
     def get_connection(self):
         '''连接数据库'''
         try:
-#            conn = cx_Oracle.connect(user='ZTQ',password='fnl12345678',dsn='10.108.144.99/orcl')
             conn = cx_Oracle.connect(user='bupt',password='bupt',dsn='10.108.147.143/orcl')
-            print 'oracle_connection success!!' 
+            print 'oracle_connection success!!'
             return conn
         except cx_Oracle.Error,e:
-            print "Oracle Error %d: %s" % (e.args[0],e.args[1])  
+            print "Oracle Error",e
 
     def close_connection(self,conn,*cursor):
         '''关闭数据库连接'''

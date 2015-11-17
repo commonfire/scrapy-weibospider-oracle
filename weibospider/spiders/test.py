@@ -13,13 +13,13 @@ from scrapy.http import Request,FormRequest
 from scrapy.utils.project import get_project_settings
 from weibospider.items import WeibospiderItem
 from scrapy.settings import Settings
-from scrapy.conf import settings
 from settings import USER_NAME
 #应用程序自定义模块
 import getinfo
 from analyzer import Analyzer
 from dataoracle import OracleStore
 from getpageload import GetWeibopage
+from dataoracle import OracleStore
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,12 @@ class WeiboSpider(CrawlSpider):
 
     def __init__(self,uid = None):
         self.uid = uid
+
+    def closed(self,reason):
+        db = OracleStore()
+        conn = db.get_connection()
+        db.close_connection(conn)
+        print '--------closed-------'
 
 #    @classmethod
 #    def from_crawler(cls,crawler,uid = None):
