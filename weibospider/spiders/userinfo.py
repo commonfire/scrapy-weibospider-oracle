@@ -135,7 +135,7 @@ class WeiboSpider(CrawlSpider):
         user_property = analyzer.get_userproperty(total_pq)
         if user_property == 'icon_verify_co_v': #该账号为公众账号
             public_userinfo_url = analyzer.get_public_userinfohref(total_pq)
-            yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo)
+            #yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo)
         else:
             userinfo_url = analyzer.get_userinfohref(total_pq)
             yield Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_userinfo)

@@ -48,14 +48,13 @@ class Analyzer:
                 p1=re.compile('(.*?)\s?//\s?<a',re.S)  #找出用户自己所发内容，不含//后面的转发内容
                 match = p1.search(d.outerHtml())
                 if match:
-                    if(match.group(1).strip() == ''):  #发表内容为空
+                    if match.group(1).strip() == '':  #发表内容为空
                         self.content_list.append('')
                     else:
-                        #print '!!!!!',match.group(1)
                         data_pq = pq(match.group(1))
                         #print '~~~~~~~~~~~~',data_pq.outerHtml()
                         content = self.get_content_src(data_pq)
-                        print '1111111111', content
+                        #print '1111111111', content
                         self.content_list.append(content)
                 else:
                     print "get_content wrong!"
@@ -100,8 +99,11 @@ class Analyzer:
                 p1 = re.compile('(.*?)\s?//\s?<a',re.S)  #获取第一个//之前的内容
                 match1 = p1.search(au.html())
                 if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#"
-                    atuser_set = pq(match1.group(1))('a').text()   
-                    self.atuser_list.append(atuser_set)
+                    if match1.group(1).strip() == '':  #发表内容为空
+                        self.atuser_list.append('')
+                    else:
+                        atuser_set = pq(match1.group(1))('a').text()   
+                        self.atuser_list.append(atuser_set)
                 else:
                     self.atuser_list.append('')
                     

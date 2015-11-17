@@ -19,17 +19,26 @@ text2= '''<div class="WB_text W_f14" node-type="feed_list_content">
 text = '''<div class="WB_text W_f14" node-type="feed_list_content">
                                     ttttttt<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E6%B1%9F%E5%AE%81%E5%85%AC%E5%AE%89%E5%9C%A8%E7%BA%BF?from=feed&amp;loc=at" usercard="name=江宁公安在线">@江宁公安在线</a> //<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E6%B1%9F%E6%B9%96%E5%A4%AA%E5%A6%96%E7%94%9F?from=feed&amp;loc=at" usercard="name=江湖太妖生">@江湖太妖生</a>:卧槽，这么恶心的家伙为什么还活着！//<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E5%A5%BD%E8%8C%B6%E8%B4%AA%E9%A6%99%E5%8F%88%E6%81%8B%E8%8A%B1?from=feed&amp;loc=at" usercard="name=好茶贪香又恋花">@好茶贪香又恋花</a>: 这种畜生没人管么？！<img render="ext" src="http://img.t.sinajs.cn/t4/appstyle/expression/ext/normal/7c/angrya_org.gif" title="[怒]" alt="[怒]" type="face" style="visibility: visible;"><img render="ext" src="http://img.t.sinajs.cn/t4/appstyle/expression/ext/normal/7c/angrya_org.gif" title="[怒]" alt="[怒]" type="face" style="visibility: visible;">//<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E6%B9%BE%E6%B9%BE%E6%98%AF%E5%B0%8F%E8%80%81%E8%99%8E?from=feed&amp;loc=at" usercard="name=湾湾是小老虎">@湾湾是小老虎</a>: //<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E5%90%83%E8%A5%BF%E7%93%9C%E7%9A%84%E5%A4%8F%E5%A4%8F%E5%A4%8F%E5%AF%BB?from=feed&amp;loc=at" usercard="name=吃西瓜的夏夏夏寻">@吃西瓜的夏夏夏寻</a>:求人肉//<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E9%9B%A8%E8%90%BD%E5%9B%9B%E6%9C%88?from=feed&amp;loc=at" usercard="name=雨落四月">@雨落四月</a>:好恶心……求人肉                        </div>'''
 
+
+text='''<div class="WB_text W_f14" node-type="feed_list_content">
+                                     //<a target="_blank" render="ext" extra-data="type=atname" href="http://weibo.com/n/%E5%A4%A9%E8%93%9D%E5%8F%B6%E6%96%91%E6%96%93?from=feed&amp;loc=at" usercard="name=天蓝叶斑斓">@天蓝叶斑斓</a>:转发微博                        </div>'''
+
 text = unicode(text)
 total_pq = pq(text)
+d = total_pq('div[node-type=feed_list_content]')
 #analyzer.get_content(total_pq)
 
 
-match = p1.search(text)
+match = p1.search(d.html())
 if match:
+    print "yes"
+    #if match.group(1).strip() == "":
+    #    print "null"
     data_pq = pq(match.group(1))
+    #print data_pq('a').text()
     #for i,item in  enumerate(list(data_pq.contents())):
     #    print str(i)+str(item)
-    content = analyzer.get_content_src(data_pq) 
+    #content = analyzer.get_content_src(data_pq) 
     #print content
 else:
     print "no"
