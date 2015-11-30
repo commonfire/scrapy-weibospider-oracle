@@ -57,7 +57,9 @@ class Analyzer:
                         #print '1111111111', content
                         self.content_list.append(content)
                 else:
-                    print "get_content wrong!"
+                    #用户发表的内容就是含有//本身
+                    self.content_list.append(d.text())
+
             else: #用户直接发表微博，没有转发情况
                 content = self.get_content_src(d)                
                 self.content_list.append(content)
@@ -72,7 +74,7 @@ class Analyzer:
             elif 'img' in str(item):  #爬取微博中表情内容
                 parents = pq(item).outerHtml()
                 if pq(parents).attr("title")==None:
-                    print 'get_image wrong!'    #此时不是新浪系统的img，是用户发的手机内置表情
+                    print 'NOT Sina bulit-in image!'    #此时不是新浪系统的img，是用户发的手机内置表情
                 else:
                     content.append(pq(parents).attr("title"))
         return ''.join(content)    #content列表转换为字符串
@@ -98,7 +100,7 @@ class Analyzer:
                 #p1 = re.compile('(<a.*?</a>)\s?//',re.S)
                 p1 = re.compile('(.*?)\s?//\s?<a',re.S)  #获取第一个//之前的内容
                 match1 = p1.search(au.html())
-                if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#"
+                if match1:       #记录用户微博中的"@用户"和"微博主题#xxx#,后续会处理只得到@用户"
                     if match1.group(1).strip() == '':  #发表内容为空
                         self.atuser_list.append('')
                     else:
@@ -118,7 +120,7 @@ class Analyzer:
                 atuser_set1 = au.find('a').text()   #记录用户微博中的"@用户"和"微博主题#xxx#"
                 self.atuser_list.append(atuser_set1)
                 
-                repostuser = au.parents('div.WB_detail')  #记录微博用户中的@用户，情况2：第一转发者
+                repostuser = au.parents('div.WB_detail')  #记录"转发"用户，此时用户直接转发原始微博，不会有//
                 ru = repostuser.find('div[node-type=feed_list_forwardContent]').find('a').eq(0).attr('nick-name') 
                 if ru is not None:
                     self.repostuser_list.append(ru) 

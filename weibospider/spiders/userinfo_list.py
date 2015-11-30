@@ -34,8 +34,8 @@ class WeiboSpider(CrawlSpider):
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
-    def __init__(self,uid_listformat = None):
-        self.uid_list = list(eval(uid_listformat))
+    def __init__(self,uid_listformat_str = None): #uid_listformat为类似列表形式"[1,2,3]"字符串
+        self.uid_list = list(eval(uid_listformat_str))
 
 #    @classmethod
 #    def from_crawler(cls,crawler,uid = None):

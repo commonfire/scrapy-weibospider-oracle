@@ -175,4 +175,5 @@ class WeibospiderPipeline(object):
                         if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
                             for atuser in item['atuser_nickname_list'][i]:
                                 conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
+
         

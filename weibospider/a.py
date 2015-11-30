@@ -34,7 +34,7 @@ if match:
     print "yes"
     #if match.group(1).strip() == "":
     #    print "null"
-    data_pq = pq(match.group(1))
+    #data_pq = pq(match.group(1))
     #print data_pq('a').text()
     #for i,item in  enumerate(list(data_pq.contents())):
     #    print str(i)+str(item)
@@ -43,3 +43,5 @@ if match:
 else:
     print "no"
 
+s="[1,2,3]"
+print list(eval(s))

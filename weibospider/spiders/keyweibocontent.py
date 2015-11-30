@@ -155,13 +155,13 @@ class WeiboSpider(CrawlSpider):
         #item['atuser_uid']= ""
         yield item
        
-        for atuser_inlist in atuser_list:
-            if atuser_inlist != []:
-                for atuser in atuser_inlist:
-                    uid_url = "http://s.weibo.com/user/"+quote(quote(str(atuser)))+"&Refer=SUer_box"
-                    yield Request(url=uid_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid,'atuser_nickname':atuser},callback=self.atuser_uid_parser)
-            else:
-                continue
+#        for atuser_inlist in atuser_list:
+#            if atuser_inlist != []:
+#                for atuser in atuser_inlist:
+#                    uid_url = "http://s.weibo.com/user/"+quote(quote(str(atuser)))+"&Refer=SUer_box"
+#                    yield Request(url=uid_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid,'atuser_nickname':atuser},callback=self.atuser_uid_parser)
+#            else:
+#                continue
 
         #item['atuser_nickname_uid'] = friendcircle.atuser_uid_parser(atuser_list)
         #item['repostuser_uid'] = friendcircle.repostuser_uid_parser(item['repost_user'])
