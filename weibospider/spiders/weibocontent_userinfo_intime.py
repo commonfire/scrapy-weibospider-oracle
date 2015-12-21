@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class WeiboSpider(CrawlSpider):
     '''输入用户uid，获取用户基本信息与发表微博内容'''
     #settings.set('ITEM_PIPELINES',{'weibospider.user_imagepipelines.UserImagesPipeline':None,'weibospider.oracle_pipelines.WeibospiderPipeline':300},priority='spider') 
-    name = 'weibocontent_userinfo'
+    name = 'weibocontent_userinfo_intime'
     allowed_domains = ['weibo.com','sina.com.cn']
     settings = get_project_settings()
     #start_username = settings['USER_NAME']
@@ -40,8 +40,9 @@ class WeiboSpider(CrawlSpider):
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
 
-    def __init__(self,uid = None):
+    def __init__(self,uid = None,per_page_num = None):
         self.uid = uid
+        self.per_page_num = per_page_num
         self.atuser_dict = {}
 
     def closed(self,reason):
@@ -113,8 +114,8 @@ class WeiboSpider(CrawlSpider):
         mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo&is_all=1&'
         GetWeibopage.data['uid'] = self.uid    
         getweibopage = GetWeibopage()
-        for page in range(WeiboSpider.page_num): 
-            GetWeibopage.data['page'] = page+1
+        for page in range(int(self.per_page_num),int(self.per_page_num)+2): 
+            GetWeibopage.data['page'] = page
             firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
             yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
 

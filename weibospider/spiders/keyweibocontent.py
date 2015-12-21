@@ -123,7 +123,7 @@ class WeiboSpider(CrawlSpider):
 #            for i in range(1):   #(count[0]):
 #                for result in cursor1.fetchmany(1):
 #                    if result[0]:
-        mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+        mainpageurl = 'http://weibo.com/u/'+str(self.uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo&is_all=1&'
         GetWeibopage.data['uid'] = self.uid    #result[0]
         getweibopage = GetWeibopage()
         for page in range(WeiboSpider.page_num): 
@@ -131,11 +131,11 @@ class WeiboSpider(CrawlSpider):
             firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
             yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
 
-            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
+            #secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
+            #yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
            
-            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
+            #thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
+            #yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
 
 #        else:
 #            yield None
@@ -178,5 +178,3 @@ class WeiboSpider(CrawlSpider):
         #item['uid'] = response.meta['uid']
         #item['atuser_nickname'] = response.meta['atuser_nickname']
         #yield item
-
-
