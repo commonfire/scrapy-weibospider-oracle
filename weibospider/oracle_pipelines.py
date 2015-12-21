@@ -44,7 +44,7 @@ class WeibospiderPipeline(object):
 
     def open_spider(self,spider):
         #获取数据库中微博内容最新时间戳
-        if spider.name in ('keyweibocontent','weibocontent_userinfo','weibocontent_danger'):
+        if spider.name in ('keyweibocontent','weibocontent_userinfo','weibocontent_danger','weibocontent_userinfo_intime'):
             db=OracleStore();conn = db.get_connection()
             sql = "select * from t_user_weibocontent where userID = '%s' order by publishTimeStamp desc" % str(spider.uid) 
             cursor = db.select_operation(conn,sql)
@@ -77,7 +77,7 @@ class WeibospiderPipeline(object):
             d = self.dbpool.runInteraction(self._userinfo_insert,item,spider)  
         elif spider.name == 'keyuser':
             d = self.dbpool.runInteraction(self._keyuser_insert,item,spider)
-        else: #weibocontent_userinfo
+        else: 
             d = self.dbpool.runInteraction(self._weibocontent_userinfo_insert,item,spider)
 
         d.addErrback(self._handle_error,item,spider) 
@@ -161,7 +161,7 @@ class WeibospiderPipeline(object):
                 if type == 'atuser':
                     if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
                         for atuser in item['atuser_nickname_list'][i]:
-                            conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
+                            conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser,publishTimeStamp) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3,:4)''',[str(item['uid']),item['time'][i],atuser,item['timestamp'][i]])
         
         else:
             for i in range(len(item['content'])):
@@ -174,6 +174,6 @@ class WeibospiderPipeline(object):
                     if type == 'atuser':
                         if item['atuser_nickname_list'][i] != {}:  #插入@用户昵称等信息
                             for atuser in item['atuser_nickname_list'][i]:
-                                conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3)''',[str(item['uid']),item['time'][i],atuser])
+                                conn.execute('''insert into t_user_weibocontent_atuser(userID,publishTime,atuser,publishTimeStamp) values(:1,to_date(:2,'YYYY-MM-DD HH24:MI'),:3,:4)''',[str(item['uid']),item['time'][i],atuser,item['timestamp'][i]])
 
         
