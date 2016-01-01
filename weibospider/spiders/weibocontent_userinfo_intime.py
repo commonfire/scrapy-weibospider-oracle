@@ -18,10 +18,10 @@ from settings import USER_NAME
 #应用程序自定义模块
 import getinfo
 import userinfo
-from getpageload import GetWeibopage
 from analyzer import Analyzer
-from friendcircle import FriendCircle
 from dataoracle import OracleStore
+from friendcircle import FriendCircle
+from getpageload import GetWeibopage
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class WeiboSpider(CrawlSpider):
     #start_username = settings['USER_NAME']
     start_username = USER_NAME
     start_password = settings['PASS_WORD']
-    start_uid = settings['UID']
+    #start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
@@ -133,7 +133,7 @@ class WeiboSpider(CrawlSpider):
         match = p.search(request_url)
         if int(match.group(1)) == 0 and int(match.group(2)) == 1: #进行用户信息的获取
             db = OracleStore();conn = db.get_connection()
-            sql = "select count(*) from t_user_info where userID='%s'" % self.uid
+            sql = "select count(*) from (select userID from t_user_info where userID='%s' union select userID from t_publicuser_info where userID='%s')" % (self.uid,self.uid)
             cursor = db.select_operation(conn,sql);count = cursor.fetchone()
             if not count[0]:  #若没有爬取过该uid用户,则爬取用户基本信息
                 analyzer = Analyzer()
@@ -141,7 +141,7 @@ class WeiboSpider(CrawlSpider):
                 user_property = analyzer.get_userproperty(total_pq)
                 if user_property == 'icon_verify_co_v': #该账号为公众账号
                     public_userinfo_url = analyzer.get_public_userinfohref(total_pq)
-                    #yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo) 暂时不处理公众账号，需要数据库设置外键
+                    yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo) 
                 else:
                     userinfo_url = analyzer.get_userinfohref(total_pq)
                     yield Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_userinfo)
@@ -160,9 +160,9 @@ class WeiboSpider(CrawlSpider):
         yield item
       
         for atuser_inlist in atuser_list:
-            if atuser_inlist != []:
+            if atuser_inlist != []: #某微博没有@用户
                 for atuser in atuser_inlist:
-                    uid_url = "http://s.weibo.com/user/"+quote(quote(str(atuser)))+"&Refer=SUer_box"
+                    uid_url = "http://s.weibo.com/user/"+quote(quote(str(atuser)))+"&Refer=weibo_user"
                     yield Request(url=uid_url,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid,'atuser_nickname':atuser},callback=self.parse_atuser_uid)
             else:
                 continue
@@ -173,9 +173,11 @@ class WeiboSpider(CrawlSpider):
         item = WeibospiderItem()
         analyzer = Analyzer()
         friendcircle = FriendCircle()
+        atuser_nickname = response.meta['atuser_nickname'];
         total_pq = analyzer.get_html(response.body,'script:contains("W_face_radius")') 
-        uid = friendcircle.get_user_uid(total_pq)
-        self.atuser_dict[response.meta['atuser_nickname']] = uid
+        #uid = friendcircle.get_user_uid(total_pq)
+        atuser_uid = friendcircle.get_user_uid2(atuser_nickname,total_pq)
+        self.atuser_dict[atuser_nickname] = atuser_uid
 
 
     def parse_userinfo(self,response):
@@ -184,7 +186,8 @@ class WeiboSpider(CrawlSpider):
         analyzer = Analyzer()
         try:
             total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
-            item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            #item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            item['image_urls'] = None 
              
             total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")')
             item['userinfo'] = analyzer.get_userinfo(total_pq2)
@@ -202,15 +205,17 @@ class WeiboSpider(CrawlSpider):
         analyzer = Analyzer()
         try:
             total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
-            item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            #item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            item['image_urls'] = None 
+            item['userAlias_public'] = total_pq1("div.PCD_header")("h1").text()
 
             total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
             item['userinfo'] = analyzer.get_public_userinfo(total_pq2)
         except Exception,e:
-            item['userinfo'] = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'>邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')   
+            item['userinfo'] = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')   
             item['image_urls'] = None
+            item['userAlias_public'] = ""
 
         item['uid'] = response.meta['uid']
         item['user_property'] = response.meta['user_property']
         yield item
-      

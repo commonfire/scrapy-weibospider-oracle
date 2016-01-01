@@ -30,7 +30,7 @@ class WeiboSpider(CrawlSpider):
     #start_username = settings['USER_NAME']
     start_username = USER_NAME
     start_password = settings['PASS_WORD']
-    start_uid = settings['UID']
+    #start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
@@ -103,40 +103,69 @@ class WeiboSpider(CrawlSpider):
 
 ##########################获取用户基本信息#############################
     def get_userinfo(self,response):
-        db = OracleStore();conn = db.get_connection()
+        #db = OracleStore();conn = db.get_connection()
         for uid in self.uid_list:
-            sql = "select count(*) from t_user_info where userID='%s'" % uid
-            cursor = db.select_operation(conn,sql);count = cursor.fetchone()
-            if not count[0]:   #没有爬取过该uid用户
-                print "!!scraping each uid:",uid
-                mainpageurl = 'http://weibo.com/u/'+str(uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
-                GetWeibopage.data['uid'] = uid     #result[0]
-                getweibopage = GetWeibopage()
-                GetWeibopage.data['page'] = 1
-                firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
-                yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':uid},callback=self.get_userurl)
-            else:
-                yield None
-            cursor.close()
-        db.close_connection(conn)
+            #sql = "select count(*) from (select userID from t_user_info where userID='%s' union select userID from t_publicuser_info where userID='%s')" % (uid,uid)
+            #cursor = db.select_operation(conn,sql);count = cursor.fetchone()
+            #if not count[0]:   #没有爬取过该uid用户
+            print "!!scraping each uid:",uid
+            mainpageurl = 'http://weibo.com/u/'+str(uid)+'?from=otherprofile&wvr=3.6&loc=tagweibo'
+            GetWeibopage.data['uid'] = uid     
+            getweibopage = GetWeibopage()
+            GetWeibopage.data['page'] = 1
+            firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
+            yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':uid},callback=self.get_userurl)
+            #else:
+            #    yield None
+            #cursor.close()
+        #db.close_connection(conn)
 
     def get_userurl(self,response):
         analyzer = Analyzer()
         total_pq =  analyzer.get_html(response.body,'script:contains("PCD_person_info")')
-        userinfo_url = analyzer.get_userinfohref(total_pq)
-        return  Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid']},callback=self.parse_userinfo)
-        
+        user_property = analyzer.get_userproperty(total_pq)
+        if user_property == 'icon_verify_co_v': #该账号为公众账号
+            public_userinfo_url = analyzer.get_public_userinfohref(total_pq)
+            yield Request(url=public_userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_public_userinfo)
+        else:  #该账号为个人账号
+            userinfo_url = analyzer.get_userinfohref(total_pq)
+            yield Request(url=userinfo_url,meta={'cookiejar':response.meta['cookiejar'],'uid':response.meta['uid'],'user_property':user_property},callback=self.parse_userinfo)
+         
     def parse_userinfo(self,response):
         item = WeibospiderItem() 
         analyzer = Analyzer()
         try:
             total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
-            item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            #item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            item['image_urls'] = None 
 
             total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
             item['userinfo'] = analyzer.get_userinfo(total_pq2)
         except Exception,e:
             item['userinfo'] = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')   
-            item['image_urls'] = ''
+            item['image_urls'] = None
         item['uid'] = response.meta['uid']
+        item['user_property'] = response.meta['user_property']
         yield item
+
+    def parse_public_userinfo(self,response):  
+        '''解析公众账号个人信息'''
+        item = WeibospiderItem()
+        analyzer = Analyzer()
+        try:
+            total_pq1 = analyzer.get_html(response.body,'script:contains("pf_photo")')
+            #item['image_urls'] = analyzer.get_userphoto_url(total_pq1)
+            item['image_urls'] = None 
+            item['userAlias_public'] = total_pq1("div.PCD_header")("h1").text() 
+            
+            total_pq2 = analyzer.get_html(response.body,'script:contains("PCD_text_b")') 
+            item['userinfo'] = analyzer.get_public_userinfo(total_pq2)
+        except Exception,e:
+            item['userinfo'] = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')   
+            item['image_urls'] = None
+            item['userAlias_public'] = ""
+
+        item['uid'] = response.meta['uid']
+        item['user_property'] = response.meta['user_property']
+        yield item
+      

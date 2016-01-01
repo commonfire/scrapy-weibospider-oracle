@@ -16,10 +16,11 @@ class Analyzer:
         self.childfollow_list = []  #某子用户关注列表
         self.userinfo_dict = {}.fromkeys(('昵称：'.decode('utf-8'),'所在地：'.decode('utf-8'),'性别：'.decode('utf-8'),'博客：'.decode('utf-8'),'个性域名：'.decode('utf-8'),'简介：'.decode('utf-8'),'生日：'.decode('utf-8'),'注册时间：'.decode('utf-8')),'')  #获取非公众账号基本信息
         self.public_userinfo_dict = {}.fromkeys(('联系人：'.decode('utf-8'),'电话：'.decode('utf-8'),'邮箱：'.decode('utf-8'),'友情链接：'.decode('utf-8')),'')  #获取公众账号基本信息
-        self.keyuser_id = []         #与某关键词相关的用户uid
-        self.keyuser_alias = []      #与某关键词相关的用户昵称
-        self.keyuser_time = []       #与某关键词相关用户uid发表内容的时间
-        self.keyuser_timestamp = []  #与某关键词相关用户uid发表内容的时间戳
+        self.keyuser_id = []          #与某关键词相关的用户uid
+        self.keyuser_alias = []       #与某关键词相关的用户昵称
+        self.keyuser_time = []        #与某关键词相关用户uid发表内容的时间
+        self.keyuser_timestamp = []   #与某关键词相关用户uid发表内容的时间戳
+        self.containsFirstTagWeibo = False #判断用户是否含第一个有'置顶'或'热帖'标签的微博
 
 #########################################获取个人主页内容#################################
     def get_mainhtml(self,total): 
@@ -42,27 +43,32 @@ class Analyzer:
     def get_content(self,total_pq):
         '''获取用户发表微博内容'''
         data = total_pq("div[node-type=feed_list_content]")
+        i = 0
         for d in data :
             d = pq(d)
-            if '//' in d.text():   #用户发表微博存在"转发"情况
-                p1=re.compile('(.*?)\s?//\s?<a',re.S)  #找出用户自己所发内容，不含//后面的转发内容
-                match = p1.search(d.outerHtml())
-                if match:
-                    if match.group(1).strip() == '':  #发表内容为空
-                        self.content_list.append('')
+            if i == 0 and str(d("span")) != "": #不爬取置顶帖/热帖span.W_icon_feedpin/feedhot
+                self.containsFirstTagWeibo = True
+            else:
+                if '//' in d.text():   #用户发表微博存在"转发"情况
+                    p1=re.compile('(.*?)\s?//\s?<a',re.S)  #找出用户自己所发内容，不含//后面的转发内容
+                    match = p1.search(d.outerHtml())
+                    if match:
+                        if match.group(1).strip() == '':  #发表内容为空
+                            self.content_list.append('')
+                        else:
+                            data_pq = pq(match.group(1))
+                            #print '~~~~~~~~~~~~',data_pq.outerHtml()
+                            content = self.get_content_src(data_pq)
+                            #print '1111111111', content
+                            self.content_list.append(content)
                     else:
-                        data_pq = pq(match.group(1))
-                        #print '~~~~~~~~~~~~',data_pq.outerHtml()
-                        content = self.get_content_src(data_pq)
-                        #print '1111111111', content
-                        self.content_list.append(content)
-                else:
-                    #用户发表的内容就是含有//本身
-                    self.content_list.append(d.text())
+                        #用户发表的内容就是含有//本身
+                        self.content_list.append(d.text())
 
-            else: #用户直接发表微博，没有转发情况
-                content = self.get_content_src(d)                
-                self.content_list.append(content)
+                else: #用户直接发表微博，没有转发情况
+                    content = self.get_content_src(d)                
+                    self.content_list.append(content)
+            i = i+1
         return self.content_list
 
     def get_content_src(self,data_pq):
@@ -82,8 +88,11 @@ class Analyzer:
     def get_time(self,total_pq):
         '''获取用户发表微博时间'''
         datatime = total_pq('div.WB_from')
-        for dt in datatime:
-            dt = pq(dt)
+        beginIndex = 0;
+        if self.containsFirstTagWeibo == True:  #判断是否含有置顶/热帖微博
+            beginIndex = 1
+        for i in range(beginIndex,len(datatime)):
+            dt = pq(datatime.eq(i))
             if(dt.find('a').eq(0).attr('name')):  #注意不记录转发微博原文的发表时间
                 time = dt.find('a').eq(0).attr('title')
                 timestamp = dt.find('a').eq(0).attr('date') 

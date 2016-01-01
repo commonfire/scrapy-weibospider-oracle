@@ -77,6 +77,8 @@ class WeibospiderPipeline(object):
             d = self.dbpool.runInteraction(self._userinfo_insert,item,spider)  
         elif spider.name == 'keyuser':
             d = self.dbpool.runInteraction(self._keyuser_insert,item,spider)
+        elif spider.name == 'userid_info_list':
+            d = self.dbpool.runInteraction(self._userid_info_update,item,spider)
         else: 
             d = self.dbpool.runInteraction(self._weibocontent_userinfo_insert,item,spider)
 
@@ -123,17 +125,21 @@ class WeibospiderPipeline(object):
                 thumbnail_url = "images/userphoto/thumbs/small/"+tmp[tmp.rindex('/')+1:tmp.rindex('.')]+"_thumbnail.jpg"
         else:
             imageurl = ''
+            thumbnail_url = ''
 
         user_property = item['user_property'] 
 
-        if user_property != 'icon_verify_co_v':
+        if user_property != 'icon_verify_co_v': #该账号为个人账号
             conn.execute('''insert into t_user_info(userID,userAlias,location,sex,blog,domain,brief,birthday,registertime,imageurl,thumbnailurl,property) values(:1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12)''',[str(item['uid']),item['userinfo']['昵称：'.decode('utf-8')],item['userinfo']['所在地：'.decode('utf-8')],item['userinfo']['性别：'.decode('utf-8')],item['userinfo']['博客：'.decode('utf-8')],item['userinfo'.decode('utf-8')]['个性域名：'.decode('utf-8')],item['userinfo']['简介：'.decode('utf-8')],item['userinfo']['生日：'.decode('utf-8')],item['userinfo']['注册时间：'.decode('utf-8')],imageurl,thumbnail_url,user_property])
-        else:
-            conn.execute('''insert into t_publicuser_info(userID,contacts,phonenum,email,link,property) values(:1,:2,:3,:4,:5,:6)''',[str(item['uid']),item['userinfo']['联系人：'.decode('utf-8')],item['userinfo']['电话：'.decode('utf-8')],item['userinfo']['邮箱：'.decode('utf-8')],item['userinfo']['友情链接：'.decode('utf-8')],user_property])
-#           conn.execute('''insert into t_publicuser_info(userID,contacts,phonenum,email,link,property) values(:1,:2,:3,:4,:5,:6)''',[str(item['uid']),item['userinfo']['联系人：'.decode('utf-8')],item['userinfo']['电话：'.decode('utf-8')],item['userinfo']['邮箱：'.decode('utf-8')],item['userinfo']['友情链接：'.decode('utf-8')],user_property])
+        else:  #该账号为公众账号
+            conn.execute('''insert into t_publicuser_info(userID,userAlias,contacts,phonenum,email,property) values(:1,:2,:3,:4,:5,:6)''',[str(item['uid']),item['userAlias_public'],item['userinfo']['联系人：'.decode('utf-8')],item['userinfo']['电话：'.decode('utf-8')],item['userinfo']['邮箱：'.decode('utf-8')],user_property])
         
         #conn.execute("update t_user_info set imagestate = 1 where userID = "+str(item['uid']))
         #conn.execute("update t_user_info set imageurl=:1,thumbnailurl=:2 where userID=:3",[imageurl,thumbnail_url,str(item['uid'])])
+
+    def _userid_info_update(self,conn,item,spider):
+        print "!!!!!",item['atuser_nickname'] 
+        print "!!!!!",item['atuser_uid'] 
 
     def _keyuser_insert(self,conn,item,spider):
         #将关键词相关用户uid插入数据库

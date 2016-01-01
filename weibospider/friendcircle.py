@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-      
+import sys
 import re
 from urllib import urlencode,quote 
 from analyzer import Analyzer
 from pyquery import PyQuery as pq
 import urllib2
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 class FriendCircle:
     '''挖掘朋友圈信息 '''
@@ -61,5 +65,16 @@ class FriendCircle:
             uid = match.group(1)
         else:
             uid = ""
+        return uid
+
+    def get_user_uid2(self,atuser_nickname,total_pq):
+        '''获得@用户uid'''
+        tmp = total_pq("a.W_texta")
+        uid = 0;
+        for i in range(len(tmp)):
+            tmp_nickname = pq(pq(pq(tmp)[i]).outerHtml()).attr('title')
+            if atuser_nickname == tmp_nickname:
+                uid = pq(pq(pq(tmp)[i]).outerHtml()).attr('uid')
+                break;
         return uid
 

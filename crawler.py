@@ -26,7 +26,7 @@ def crawl():
         elif sys.argv[2] == 'weibocontent_userinfo':  #查询用户微博内容及基本信息
             yield runner.crawl('weibocontent_userinfo',uid = sys.argv[1])
         elif sys.argv[2] == 'userinfo_list':  #根据uidlist查询用户个人信息
-            yield runner.crawl('userinfo_list',uid_listformat = sys.argv[1])
+            yield runner.crawl('userinfo_list',uid_listformat_str = sys.argv[1])
         else:
             yield runner.crawl('userinfo',uid = sys.argv[1]) # 查询用户个人信息
     else:

@@ -131,11 +131,11 @@ class WeiboSpider(CrawlSpider):
             firstloadurl = mainpageurl + getweibopage.get_firstloadurl()
             yield  Request(url=firstloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
 
-            #secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
-            #yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
+            secondloadurl = mainpageurl + getweibopage.get_secondloadurl()
+            yield  Request(url=secondloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)
            
-            #thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
-            #yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
+            thirdloadurl = mainpageurl + getweibopage.get_thirdloadurl()
+            yield  Request(url=thirdloadurl,meta={'cookiejar':response.meta['cookiejar'],'uid':self.uid},callback=self.parse_load)           
 
 #        else:
 #            yield None

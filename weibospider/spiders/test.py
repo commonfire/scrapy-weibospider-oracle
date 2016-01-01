@@ -30,12 +30,10 @@ class WeiboSpider(CrawlSpider):
     #start_username = settings['USER_NAME']
     start_username = USER_NAME
     start_password = settings['PASS_WORD']
-    start_uid = settings['UID']
+    #start_uid = settings['UID']
     page_num = settings['PAGE_NUM']
     follow_page_num = settings['FOLLOW_PAGE_NUM']
 
-    def __init__(self,uid = None):
-        self.uid = uid
 
     def closed(self,reason):
         db = OracleStore()
