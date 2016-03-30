@@ -1,1 +1,1 @@
-# scrapy-weibospider-2
+# scrapy-weibospider-oracle
